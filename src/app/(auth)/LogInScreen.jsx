@@ -52,7 +52,7 @@ export default function LoginScreen() {
       setLoading(false);
 
       router.push({
-        pathname: "/Documents",
+        pathname: "/HomeScreen",
         params: {
           mobile: mobileNumber,
         },

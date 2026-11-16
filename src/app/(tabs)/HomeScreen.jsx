@@ -1,12 +1,9 @@
 
 import {
-  useCallback,
-  useEffect,
-  useState,
+  useState
 } from "react";
 
 import {
-  ActivityIndicator,
   Platform,
   RefreshControl,
   ScrollView,
@@ -15,13 +12,13 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import { getDeliveryHome } from "../../utils/Function";
+
 
 const COLORS = {
   background: "#050505",
@@ -61,72 +58,7 @@ export default function HomeScreen() {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
-  // Load Delivery Home API
-  const loadHomeData = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      setError("");
-
-      const response = await getDeliveryHome();
-
-      // Supports common Laravel response structures:
-      // { success: true, data: {...} }
-      // { data: {...} }
-      // { home: {...} }
-      const root = response?.data ?? response;
-
-      const result =
-        root?.data ??
-        root?.home ??
-        root;
-
-      if (
-        response?.success === false ||
-        root?.success === false
-      ) {
-        throw new Error(
-          response?.message ||
-          root?.message ||
-          "Unable to load dashboard"
-        );
-      }
-
-      setHomeData(result || {});
-
-      // Update online status only when API provides it.
-      const onlineValue =
-        result?.is_online ??
-        result?.online_status ??
-        result?.online;
-
-      if (onlineValue !== undefined && onlineValue !== null) {
-        const online =
-          onlineValue === true ||
-          onlineValue === 1 ||
-          onlineValue === "1" ||
-          String(onlineValue).toLowerCase() === "online";
-
-        setIsOnline(online);
-      }
-
-      console.log("HOME DATA:", result);
-    } catch (err) {
-      console.log("HOME SCREEN ERROR:", err.message);
-      setError(err.message || "Unable to load dashboard");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadHomeData();
-  }, [loadHomeData]);
+  
 
   // Dashboard values
   const todayOrders =
@@ -183,26 +115,6 @@ export default function HomeScreen() {
     router.push(path);
   };
 
-  // Loading Screen
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <StatusBar
-          barStyle="light-content"
-          backgroundColor={COLORS.background}
-        />
-
-        <ActivityIndicator
-          size="large"
-          color={COLORS.primary}
-        />
-
-        <Text style={styles.loadingText}>
-          Loading Dashboard...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>

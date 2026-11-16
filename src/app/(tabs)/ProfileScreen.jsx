@@ -1,14 +1,11 @@
 
-import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  Platform,
   Image,
-  Alert,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -31,25 +28,25 @@ export default function ProfileScreen() {
       id: "1",
       title: "Personal Details",
       icon: "person-outline",
-      route: "/profile/PersonalDetailsScreen",
+      route: "/PersonalDetails",
     },
     {
       id: "2",
       title: "Vehicle Details",
       icon: "bicycle-outline",
-      route: "/profile/VehicleDetailsScreen",
+      route: "/VechileDetails",
     },
     {
       id: "3",
       title: "Bank Details",
       icon: "card-outline",
-      route: "/profile/BankDetailsScreen",
+      route: "/BankDetails",
     },
     {
       id: "4",
       title: "Documents",
       icon: "document-text-outline",
-      route: "/profile/DocumentsScreen",
+      route: "/Documents",
     },
   ];
 
