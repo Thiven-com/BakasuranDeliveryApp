@@ -1,7 +1,4 @@
-
-import {
-  useState
-} from "react";
+import { useEffect, useState } from "react";
 
 import {
   Platform,
@@ -12,14 +9,12 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-
-
-
+import { getDeliveryHome } from "../../utils/Function";
 const COLORS = {
   background: "#050505",
   card: "#1C1C1C",
@@ -38,6 +33,37 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const loadHomeData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      setError("");
+
+      const response = await getDeliveryHome();
+
+      console.log("Home API Response:", response);
+
+      if (response?.success === 0) {
+        setError(response.message || "Failed to load home data");
+        return;
+      }
+
+      setHomeData(response?.data ?? response);
+    } catch (error) {
+      console.log("Home API Error:", error);
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  useEffect(() => {
+    loadHomeData();
+  }, []);
 
   // Format earnings
   const formatMoney = (value) => {
@@ -58,30 +84,14 @@ export default function HomeScreen() {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
-  
-
   // Dashboard values
-  const todayOrders =
-    homeData?.today_orders ??
-    homeData?.orders_today ??
-    homeData?.todayOrders ??
-    0;
+  const todayOrders = homeData?.order_statistics?.total_orders ?? 0;
 
-  const todayEarnings =
-    homeData?.today_earnings ??
-    homeData?.earnings_today ??
-    homeData?.todayEarnings ??
-    0;
+  const todayEarnings = homeData?.order_statistics?.today_earnings ?? 0;
 
-  const newOrdersValue =
-    homeData?.new_orders_count ??
-    homeData?.new_orders ??
-    0;
+  const newOrdersCount = 0;
 
-  const newOrdersCount = Array.isArray(newOrdersValue)
-    ? newOrdersValue.length
-    : Number(newOrdersValue) || 0;
-
+  const partnerName = homeData?.delivery_partner?.name ?? "Delivery Partner";
   // Dashboard Actions
   const dashboardItems = [
     {
@@ -95,7 +105,7 @@ export default function HomeScreen() {
       title: "My Orders",
       icon: "receipt-outline",
       color: COLORS.white,
-      route: "/(tabs)/OrdersScreen",
+      route: "/OrderDetails",
     },
     {
       title: "Earnings",
@@ -115,13 +125,9 @@ export default function HomeScreen() {
     router.push(path);
   };
 
-
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -139,27 +145,18 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>
-              Hello, {homeData?.name || homeData?.partner_name || "Raju"}{" "}
-              <Text style={styles.wave}>👋</Text>
+              Hello, {partnerName} <Text style={styles.wave}>👋</Text>
             </Text>
 
-            <Text style={styles.subGreeting}>
-              Delivery Partner
-            </Text>
+            <Text style={styles.subGreeting}>Delivery Partner</Text>
           </View>
 
           <TouchableOpacity
             style={styles.avatar}
             activeOpacity={0.8}
-            onPress={() =>
-              openScreen("/(tabs)/ProfileScreen")
-            }
+            onPress={() => openScreen("/(tabs)/ProfileScreen")}
           >
-            <Ionicons
-              name="person"
-              size={25}
-              color={COLORS.white}
-            />
+            <Ionicons name="person" size={25} color={COLORS.white} />
           </TouchableOpacity>
         </View>
 
@@ -172,39 +169,21 @@ export default function HomeScreen() {
               color={COLORS.white}
             />
 
-            <Text style={styles.errorText}>
-              {error}
-            </Text>
+            <Text style={styles.errorText}>{error}</Text>
 
-            <TouchableOpacity
-              onPress={() => loadHomeData()}
-            >
-              <Text style={styles.retryText}>
-                Retry
-              </Text>
+            <TouchableOpacity onPress={() => loadHomeData()}>
+              <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Online / Offline */}
-        <View
-          style={[
-            styles.onlineCard,
-            !isOnline && styles.offlineCard,
-          ]}
-        >
+        <View style={[styles.onlineCard, !isOnline && styles.offlineCard]}>
           <View style={styles.onlineTextContainer}>
-            <View
-              style={[
-                styles.statusDot,
-                !isOnline && styles.offlineDot,
-              ]}
-            />
+            <View style={[styles.statusDot, !isOnline && styles.offlineDot]} />
 
             <Text style={styles.onlineText}>
-              {isOnline
-                ? "You are Online"
-                : "You are Offline"}
+              {isOnline ? "You are Online" : "You are Offline"}
             </Text>
           </View>
 
@@ -223,23 +202,15 @@ export default function HomeScreen() {
         {/* Statistics */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {todayOrders}
-            </Text>
+            <Text style={styles.statNumber}>{todayOrders}</Text>
 
-            <Text style={styles.statLabel}>
-              Today Orders
-            </Text>
+            <Text style={styles.statLabel}>Today Orders</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {formatMoney(todayEarnings)}
-            </Text>
+            <Text style={styles.statNumber}>{formatMoney(todayEarnings)}</Text>
 
-            <Text style={styles.statLabel}>
-              Today Earnings
-            </Text>
+            <Text style={styles.statLabel}>Today Earnings</Text>
           </View>
         </View>
 
@@ -253,25 +224,16 @@ export default function HomeScreen() {
               onPress={() => openScreen(item.route)}
             >
               <View style={styles.iconWrapper}>
-                <Ionicons
-                  name={item.icon}
-                  size={27}
-                  color={item.color}
-                />
+                <Ionicons name={item.icon} size={27} color={item.color} />
 
-                {item.badge !== undefined &&
-                  Number(item.badge) > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>
-                        {item.badge}
-                      </Text>
-                    </View>
-                  )}
+                {item.badge !== undefined && Number(item.badge) > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{item.badge}</Text>
+                  </View>
+                )}
               </View>
 
-              <Text style={styles.dashboardTitle}>
-                {item.title}
-              </Text>
+              <Text style={styles.dashboardTitle}>{item.title}</Text>
             </TouchableOpacity>
           ))}
         </View>

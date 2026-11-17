@@ -21,7 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // COMMON STYLES
 import Colors from "../../constants/Colors";
 import Fonts from "../../constants/Fonts";
-
+import { saveToken, verifyDeliveryOtp } from "../../utils/Function";
 export default function OtpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -64,28 +64,57 @@ export default function OtpScreen() {
   };
 
   // VERIFY OTP
-  const handleVerify = () => {
+  // VERIFY OTP API
+  const handleVerify = async () => {
     if (otp.length !== 4) {
       Alert.alert("Invalid OTP", "Please enter your 4-digit OTP.");
       return;
     }
 
-    Keyboard.dismiss();
-    setLoading(true);
+    try {
+      Keyboard.dismiss();
+      setLoading(true);
 
-    // Demo verification
-    setTimeout(() => {
+      const response = await verifyDeliveryOtp(mobile, otp);
+
+      console.log("OTP VERIFICATION RESPONSE:", response);
+
+      if (response?.success === 0 || response?.success === false) {
+        Alert.alert("Verification Failed", response?.message || "Invalid OTP.");
+        return;
+      }
+
+      // Extract token (adjust after confirming API response)
+      const token = response?.data?.token || response?.token;
+
+      if (!token) {
+        Alert.alert(
+          "Error",
+          "OTP verified, but authentication token was not received.",
+        );
+        return;
+      }
+
+      // SAVE TOKEN
+      const saved = await saveToken(token);
+
+      if (!saved) {
+        Alert.alert("Error", "Unable to save login session.");
+        return;
+      }
+
+      Alert.alert("Success", response?.message || "OTP verified successfully.");
+
+      // Navigate to home screen
+      router.replace("/HomeScreen");
+    } catch (error) {
+      console.log("OTP Verification Error:", error);
+
+      Alert.alert("Error", "Unable to verify OTP.");
+    } finally {
       setLoading(false);
-
-      Alert.alert(
-        "Verification Successful",
-        "Your OTP has been verified successfully.",
-      );
-
-      // Add dashboard navigation after creating Home screen.
-    }, 1000);
+    }
   };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />

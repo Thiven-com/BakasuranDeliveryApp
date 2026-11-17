@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // COMMON STYLES
 import Colors from "../../constants/Colors";
 import Fonts from "../../constants/Fonts";
+import { deliveryLogin } from "../../utils/Function";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function LoginScreen() {
   };
 
   // SEND OTP
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (mobileNumber.length !== 10) {
       Alert.alert(
         "Invalid Mobile Number",
@@ -45,19 +46,35 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Demo navigation
-    setTimeout(() => {
-      setLoading(false);
+      const data = await deliveryLogin(mobileNumber);
 
+      if (!data || data.success === 0 || data.success === false) {
+        throw new Error(
+          data?.message || "Unable to send OTP. Please try again.",
+        );
+      }
+
+      console.log("Login API Response:", data);
+
+      Alert.alert("Success", data.message || "OTP sent successfully.");
+
+      // Navigate to OTP screen after successful API response
       router.push({
-        pathname: "/HomeScreen",
+        pathname: "/OTPScreen",
         params: {
           mobile: mobileNumber,
         },
       });
-    }, 500);
+    } catch (error) {
+      console.log("Login API Error:", error);
+
+      Alert.alert("Login Failed", error.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -169,7 +186,7 @@ export default function LoginScreen() {
 
             {/* BOTTOM DECORATION */}
 
-            <View style={styles.bottomDecoration}>
+            {/*<View style={styles.bottomDecoration}>
               <Ionicons
                 name="pizza-outline"
                 size={22}
@@ -199,7 +216,7 @@ export default function LoginScreen() {
                 size={22}
                 color={Colors.redOverlay}
               />
-            </View>
+            </View>*/}
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>

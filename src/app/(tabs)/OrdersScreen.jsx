@@ -1,89 +1,91 @@
-
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  Platform,
-  Alert,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { acceptOrder, getNewOrders } from "../../utils/Function";
 
 const COLORS = {
-  background: "#050505",
-  card: "#191919",
-  cardBorder: "#252525",
+  background: "#0A0A0A",
+  card: "#161616",
+  cardBorder: "#262626",
+  surface: "#1F1F1F",
   red: "#F9080C",
+  redSoft: "rgba(249, 8, 12, 0.14)",
   white: "#FFFFFF",
-  gray: "#B8B8B8",
+  gray: "#9A9A9A",
+  lightGray: "#D0D0D0",
   gold: "#F5B51B",
+  goldSoft: "rgba(245, 181, 27, 0.14)",
 };
 
-const orders = [
-  {
-    id: "#BSK100234",
-    amount: "₹320",
-    items: "2 Items",
-    restaurant: "Biryani House",
-    address: "Madhapur, Hyderabad",
-    distance: "4.5 km",
-    time: "15 mins",
-  },
-  {
-    id: "#BSK100235",
-    amount: "₹450",
-    items: "3 Items",
-    restaurant: "Pizza Planet",
-    address: "Hitech City, Hyderabad",
-    distance: "5.2 km",
-    time: "18 mins",
-  },
-  {
-    id: "#BSK100236",
-    amount: "₹280",
-    items: "2 Items",
-    restaurant: "Spice Kitchen",
-    address: "Kondapur, Hyderabad",
-    distance: "3.8 km",
-    time: "12 mins",
-  },
-];
-
 export default function OrdersScreen() {
-  const handleAccept = (order) => {
-    Alert.alert(
-      "Accept Order",
-      `Do you want to accept ${order.id}?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Accept",
-          onPress: () => {
-            Alert.alert(
-              "Demo",
-              "Order acceptance API is not connected yet."
-            );
-          },
-        },
-      ]
-    );
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [acceptingId, setAcceptingId] = useState(null);
+  const [error, setError] = useState("");
+
+  const loadNewOrders = useCallback(async (isRefresh = false) => {
+    try {
+      isRefresh ? setRefreshing(true) : setLoading(true);
+      setError("");
+
+      const response = await getNewOrders();
+
+      if (response?.status === true) {
+        setOrders(response.data || []);
+      } else {
+        setError(response?.message || "Failed to load orders");
+      }
+    } catch (err) {
+      console.log("New Orders Error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const handleAccept = async (orderId) => {
+    try {
+      setAcceptingId(orderId);
+      const response = await acceptOrder(orderId);
+
+      if (response?.status === true) {
+        router.push({
+          pathname: "/OrderDetails",
+          params: { orderId: String(orderId) },
+        });
+      } else {
+        Alert.alert("Error", response?.message || "Unable to accept order");
+      }
+    } catch (err) {
+      console.log("Accept Order Error:", err);
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setAcceptingId(null);
+    }
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
+  useEffect(() => {
+    loadNewOrders();
+  }, [loadNewOrders]);
 
-      
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -92,113 +94,172 @@ export default function OrdersScreen() {
           activeOpacity={0.7}
           onPress={() => router.back()}
         >
-          <Ionicons
-            name="chevron-back"
-            size={25}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={22} color={COLORS.white} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          New Orders (3)
-        </Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>New Orders</Text>
+          {!loading && (
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>{orders.length}</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.headerRight} />
       </View>
 
-      {/* Orders List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadNewOrders(true)}
+            tintColor={COLORS.red}
+            colors={[COLORS.red]}
+          />
+        }
       >
-        {orders.map((order) => (
-          <View key={order.id} style={styles.orderCard}>
-
-            {/* Order ID and Badge */}
-            <View style={styles.topRow}>
-              <Text style={styles.orderId}>
-                {order.id}
-              </Text>
-
-              <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>
-                  New
-                </Text>
-              </View>
-            </View>
-
-            {/* Amount and Items */}
-            <View style={styles.amountRow}>
-              <Text style={styles.amount}>
-                {order.amount}
-              </Text>
-
-              <Text style={styles.separator}> • </Text>
-
-              <Text style={styles.itemCount}>
-                {order.items}
-              </Text>
-            </View>
-
-            {/* Restaurant Details */}
-            <View style={styles.restaurantRow}>
-              <Ionicons
-                name="location"
-                size={17}
-                color={COLORS.red}
-              />
-
-              <View style={styles.restaurantInfo}>
-                <Text style={styles.restaurantName}>
-                  {order.restaurant}
-                </Text>
-
-                <Text style={styles.address}>
-                  {order.address}
-                </Text>
-              </View>
-            </View>
-
-            {/* Distance and Delivery Time */}
-            <View style={styles.deliveryInfo}>
-              <Ionicons
-                name="arrow-down"
-                size={19}
-                color={COLORS.red}
-              />
-
-              <Ionicons
-                name="location"
-                size={15}
-                color={COLORS.gray}
-              />
-
-              <Text style={styles.deliveryText}>
-                {order.distance}
-              </Text>
-
-              <Text style={styles.separator}> • </Text>
-
-              <Text style={styles.deliveryText}>
-                Est. {order.time}
-              </Text>
-            </View>
-
-            {/* Accept Button */}
-            <TouchableOpacity
-              style={styles.acceptButton}
-              activeOpacity={0.8}
-              onPress={() => router.push("/OrderDetails")}
-            >
-              <Text style={styles.acceptButtonText}>
-                Accept
-              </Text>
+        {/* Error */}
+        {!!error && (
+          <View style={styles.errorBox}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={20}
+              color={COLORS.red}
+            />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={() => loadNewOrders()}>
+              <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ))}
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="large" color={COLORS.red} />
+            <Text style={styles.stateText}>Loading orders...</Text>
+          </View>
+        )}
+
+        {/* Empty */}
+        {!loading && orders.length === 0 && !error && (
+          <View style={styles.centerBox}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="receipt-outline" size={34} color={COLORS.gray} />
+            </View>
+            <Text style={styles.emptyTitle}>No new orders</Text>
+            <Text style={styles.stateText}>
+              Pull down to refresh and check again.
+            </Text>
+          </View>
+        )}
+
+        {/* Orders */}
+        {orders.map((order) => {
+          const isAccepting = acceptingId === order.id;
+
+          return (
+            <View key={order.id} style={styles.orderCard}>
+              {/* Top row */}
+              <View style={styles.topRow}>
+                <View>
+                  <Text style={styles.label}>ORDER ID</Text>
+                  <Text style={styles.orderId}>#{order.booking_number}</Text>
+                </View>
+
+                <View style={styles.newBadge}>
+                  <View style={styles.badgeDot} />
+                  <Text style={styles.newBadgeText}>
+                    {String(order.status || "New").toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Amount */}
+              <View style={styles.amountBox}>
+                <Text style={styles.amountLabel}>Order Amount</Text>
+                <Text style={styles.amount}>₹{order.price}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              {/* Restaurant */}
+              <View style={styles.restaurantRow}>
+                <View style={styles.restaurantIcon}>
+                  <Ionicons name="restaurant" size={18} color={COLORS.gold} />
+                </View>
+
+                <View style={styles.restaurantInfo}>
+                  <Text style={styles.restaurantName} numberOfLines={1}>
+                    {order.restaurant?.name || "Restaurant"}
+                  </Text>
+                  <Text style={styles.address} numberOfLines={2}>
+                    {order.restaurant?.address || "Address unavailable"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Distance + time chips */}
+              <View style={styles.chipsRow}>
+                <View style={styles.chip}>
+                  <Ionicons
+                    name="navigate-outline"
+                    size={15}
+                    color={COLORS.lightGray}
+                  />
+                  <Text style={styles.chipText}>
+                    {order.distance_km != null
+                      ? `${order.distance_km} km`
+                      : "-- km"}
+                  </Text>
+                </View>
+
+                <View style={styles.chip}>
+                  <Ionicons
+                    name="time-outline"
+                    size={15}
+                    color={COLORS.lightGray}
+                  />
+                  <Text style={styles.chipText}>
+                    {order.estimated_time != null
+                      ? `${order.estimated_time} mins`
+                      : "-- mins"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Accept Button */}
+              <TouchableOpacity
+                style={[
+                  styles.acceptButton,
+                  isAccepting && styles.acceptDisabled,
+                ]}
+                activeOpacity={0.85}
+                disabled={isAccepting}
+                onPress={() => handleAccept(order.id)}
+              >
+                {isAccepting ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.acceptButtonText}>Accept Order</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -208,163 +269,266 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  
-
   // Header
   header: {
-    height: 70,
+    height: 64,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
-
   backButton: {
-    width: 35,
+    width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
     justifyContent: "center",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
-
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   headerTitle: {
     color: COLORS.white,
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: "700",
-    textAlign: "center",
+    letterSpacing: 0.3,
   },
-
+  countPill: {
+    marginLeft: 8,
+    minWidth: 26,
+    height: 26,
+    paddingHorizontal: 8,
+    borderRadius: 13,
+    backgroundColor: COLORS.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countPillText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   headerRight: {
-    width: 35,
+    width: 40,
   },
 
-  // Orders List
+  // List
   scrollView: {
     flex: 1,
   },
-
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 5,
-    paddingBottom: 25,
+    paddingTop: 8,
+    paddingBottom: 30,
+    flexGrow: 1,
   },
 
-  // Order Card
+  // States
+  centerBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+  },
+  stateText: {
+    color: COLORS.gray,
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  emptyIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.redSoft,
+    borderWidth: 1,
+    borderColor: "rgba(249, 8, 12, 0.35)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  errorText: {
+    flex: 1,
+    color: COLORS.red,
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  retryText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+
+  // Card
   orderCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    paddingHorizontal: 10,
-    paddingTop: 20,
-    paddingBottom: 15,
-    marginBottom: 19,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
-
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 3,
   },
-
+  label: {
+    color: COLORS.gray,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
   orderId: {
     color: COLORS.white,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
   },
-
   newBadge: {
-    backgroundColor: COLORS.red,
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    minWidth: 32,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: COLORS.redSoft,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-
+  badgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: COLORS.red,
+    marginRight: 6,
+  },
   newBadgeText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "700",
+    color: COLORS.red,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
 
   // Amount
-  amountRow: {
+  amountBox: {
+    marginTop: 16,
+    backgroundColor: COLORS.goldSoft,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 7,
+    justifyContent: "space-between",
   },
-
+  amountLabel: {
+    color: COLORS.lightGray,
+    fontSize: 14,
+    fontWeight: "500",
+  },
   amount: {
     color: COLORS.gold,
-    fontSize: 12,
+    fontSize: 24,
     fontWeight: "800",
   },
 
-  separator: {
-    color: COLORS.gray,
-    fontSize: 19,
-  },
-
-  itemCount: {
-    color: COLORS.gray,
-    fontSize: 17,
-    fontWeight: "500",
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.cardBorder,
+    marginVertical: 16,
   },
 
   // Restaurant
   restaurantRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 6,
-  },
-
-  restaurantInfo: {
-    marginLeft: 5,
-    flex: 1,
-  },
-
-  restaurantName: {
-    color: COLORS.white,
-    fontSize: 19,
-    fontWeight: "600",
-  },
-
-  address: {
-    color: COLORS.gray,
-    fontSize: 17,
-    marginTop: 2,
-  },
-
-  // Distance
-  deliveryInfo: {
-    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
-    paddingLeft: 1,
   },
-
-  deliveryText: {
-    color: "#D0D0D0",
-    fontSize: 16,
-    fontWeight: "500",
-    marginLeft: 3,
-  },
-
-  // Accept Button
-  acceptButton: {
-    height: 40,
-    width: "80%",
-    backgroundColor: COLORS.red,
-    borderRadius: 20,
+  restaurantIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.goldSoft,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
+  },
+  restaurantInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  restaurantName: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  address: {
+    color: COLORS.gray,
+    fontSize: 14,
+    marginTop: 3,
+    lineHeight: 19,
   },
 
+  // Chips
+  chipsRow: {
+    flexDirection: "row",
+    marginTop: 14,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 10,
+  },
+  chipText: {
+    color: COLORS.lightGray,
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 6,
+  },
+
+  // Accept button
+  acceptButton: {
+    height: 50,
+    marginTop: 18,
+    flexDirection: "row",
+    backgroundColor: COLORS.red,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: COLORS.red,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  acceptDisabled: {
+    opacity: 0.7,
+  },
   acceptButtonText: {
     color: COLORS.white,
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "700",
+    marginLeft: 8,
   },
 });

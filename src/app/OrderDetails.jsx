@@ -1,79 +1,147 @@
-
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
   ScrollView,
   StatusBar,
-  Platform,
-  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { getOrderDetails } from "../utils/Function";
 
 const COLORS = {
-  background: "#050505",
-  card: "#191919",
-  cardBorder: "#292929",
+  background: "#0A0A0A",
+  card: "#161616",
+  cardBorder: "#262626",
+  surface: "#1F1F1F",
   red: "#F9080C",
-  redDark: "#B80000",
+  redSoft: "rgba(249, 8, 12, 0.14)",
   white: "#FFFFFF",
-  gray: "#AFAFAF",
+  gray: "#9A9A9A",
+  lightGray: "#D0D0D0",
   green: "#20D34A",
+  greenSoft: "rgba(32, 211, 74, 0.14)",
   gold: "#F5B51B",
+  goldSoft: "rgba(245, 181, 27, 0.14)",
+};
+
+/**
+ * Normalises the API response so the UI doesn't break if a field is missing.
+ * Adjust the field names here if your backend uses different keys
+ * (check the "Order Details:" console.log output).
+ */
+const normalizeOrder = (data = {}) => {
+  const items = Array.isArray(data.items)
+    ? data.items
+    : Array.isArray(data.order_items)
+      ? data.order_items
+      : [];
+
+  return {
+    id: data.id,
+    bookingNumber: data.booking_number || data.order_number || "",
+    status: data.status || "",
+    amount: data.price ?? data.total_amount ?? data.amount ?? null,
+
+    restaurantName: data.restaurant?.name || "Restaurant",
+    restaurantAddress: data.restaurant?.address || "Address unavailable",
+    restaurantPhone: data.restaurant?.phone || data.restaurant?.mobile || "",
+
+    customerName: data.customer?.name || data.user?.name || "Customer",
+    customerAddress:
+      data.customer?.address ||
+      data.delivery_address ||
+      data.user?.address ||
+      "Address unavailable",
+    customerPhone:
+      data.customer?.phone ||
+      data.customer?.mobile ||
+      data.user?.phone ||
+      data.user?.mobile ||
+      "",
+
+    items: items.map((item) => ({
+      name: item.name || item.item_name || item.product?.name || "Item",
+      quantity: item.quantity ?? item.qty ?? 1,
+    })),
+  };
 };
 
 export default function OrderDetailsScreen() {
-  const order = {
-    id: "#BSK100234",
-    amount: "₹320",
-    itemCount: "2 Items",
+  const { orderId: rawOrderId } = useLocalSearchParams();
 
-    restaurant: "Biryani House",
-    restaurantAddress: "Madhapur, Hyderabad",
-    restaurantPhone: "+919876543210",
+  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
 
-    customer: "Ravi Kumar",
-    customerAddress:
-      "H.No 8-3-4, Kavuri Hills, Hyderabad",
-    customerPhone: "+919876543211",
+  console.log("Received Order ID:", orderId);
 
-    items: [
-      {
-        name: "Chicken Biryani",
-        quantity: "x1",
-      },
-      {
-        name: "Egg Biryani",
-        quantity: "x1",
-      },
-    ],
-  };
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleCall = (person) => {
-    Alert.alert(
-      "Call " + person,
-      "Phone calling will be connected when the actual contact details are available."
+  const loadOrderDetails = useCallback(async () => {
+    if (!orderId) {
+      setError("Order id is missing");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await getOrderDetails(orderId);
+      console.log("Order Details:", response);
+
+      if (response?.status === true) {
+        setOrder(normalizeOrder(response.data));
+      } else {
+        setError(response?.message || "Failed to load order details");
+      }
+    } catch (err) {
+      console.log("Order Details Error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    loadOrderDetails();
+  }, [loadOrderDetails]);
+
+  const handleCall = (label, phone) => {
+    if (!phone) {
+      Alert.alert(`Call ${label}`, "Phone number is not available.");
+      return;
+    }
+    Linking.openURL(`tel:${phone}`).catch(() =>
+      Alert.alert("Error", "Unable to open the phone dialer."),
     );
   };
 
   const handlePickup = () => {
-    Alert.alert(
-      "Pick Up Order",
-      "Pickup verification API is not connected yet."
-    );
+    router.push({
+      pathname: "/PickupScreen",
+      params: { id: String(orderId) },
+    });
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
+  const totalQty = order?.items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0,
+  );
 
-      
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -82,11 +150,7 @@ export default function OrderDetailsScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={22} color={COLORS.white} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Order Details</Text>
@@ -94,137 +158,180 @@ export default function OrderDetailsScreen() {
         <View style={styles.headerRight} />
       </View>
 
-      {/* Main Content */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Order Information */}
-        <View style={styles.orderHeader}>
-          <Text style={styles.orderId}>{order.id}</Text>
-
-          <View style={styles.amountRow}>
-            <Text style={styles.amount}>{order.amount}</Text>
-            <Text style={styles.separator}> • </Text>
-            <Text style={styles.itemCount}>{order.itemCount}</Text>
-          </View>
+      {/* Loading */}
+      {loading && (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={COLORS.red} />
+          <Text style={styles.stateText}>Loading order details...</Text>
         </View>
+      )}
 
-        {/* Pickup Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pickup From</Text>
+      {/* Error */}
+      {!loading && !!error && (
+        <View style={styles.centerBox}>
+          <View style={styles.errorIcon}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={34}
+              color={COLORS.red}
+            />
+          </View>
+          <Text style={styles.errorTitle}>Couldn't load order</Text>
+          <Text style={styles.stateText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            activeOpacity={0.85}
+            onPress={loadOrderDetails}
+          >
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-          <View style={styles.locationRow}>
-            <View style={styles.locationIcon}>
-              <Ionicons
-                name="home"
-                size={18}
-                color={COLORS.red}
-              />
+      {/* Content */}
+      {!loading && !error && order && (
+        <>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Order summary */}
+            <View style={styles.card}>
+              <View style={styles.summaryTop}>
+                <View>
+                  <Text style={styles.label}>ORDER ID</Text>
+                  <Text style={styles.orderId}>#{order.bookingNumber}</Text>
+                </View>
+
+                {!!order.status && (
+                  <View style={styles.statusBadge}>
+                    <View style={styles.badgeDot} />
+                    <Text style={styles.statusText}>
+                      {String(order.status).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.amountBox}>
+                <Text style={styles.amountLabel}>
+                  {order.items.length}{" "}
+                  {order.items.length === 1 ? "Item" : "Items"}
+                  {totalQty ? ` • Qty ${totalQty}` : ""}
+                </Text>
+                <Text style={styles.amount}>
+                  {order.amount != null ? `₹${order.amount}` : "--"}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationName}>
-                {order.restaurant}
-              </Text>
+            {/* Route timeline */}
+            <View style={styles.card}>
+              {/* Pickup */}
+              <View style={styles.stopRow}>
+                <View style={styles.timeline}>
+                  <View style={[styles.stopIcon, styles.pickupIcon]}>
+                    <Ionicons name="restaurant" size={16} color={COLORS.gold} />
+                  </View>
+                  <View style={styles.timelineLine} />
+                </View>
 
-              <Text style={styles.locationAddress}>
-                {order.restaurantAddress}
-              </Text>
+                <View style={styles.stopBody}>
+                  <Text style={[styles.stopTag, { color: COLORS.gold }]}>
+                    PICKUP FROM
+                  </Text>
+                  <Text style={styles.stopName}>{order.restaurantName}</Text>
+                  <Text style={styles.stopAddress}>
+                    {order.restaurantAddress}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.callButton}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    handleCall("Restaurant", order.restaurantPhone)
+                  }
+                >
+                  <Ionicons name="call" size={18} color={COLORS.white} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Delivery */}
+              <View style={[styles.stopRow, { marginTop: 4 }]}>
+                <View style={styles.timeline}>
+                  <View style={[styles.stopIcon, styles.dropIcon]}>
+                    <Ionicons name="location" size={17} color={COLORS.green} />
+                  </View>
+                </View>
+
+                <View style={styles.stopBody}>
+                  <Text style={[styles.stopTag, { color: COLORS.green }]}>
+                    DELIVER TO
+                  </Text>
+                  <Text style={styles.stopName}>{order.customerName}</Text>
+                  <Text style={styles.stopAddress}>
+                    {order.customerAddress}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.callButton}
+                  activeOpacity={0.8}
+                  onPress={() => handleCall("Customer", order.customerPhone)}
+                >
+                  <Ionicons name="call" size={18} color={COLORS.white} />
+                </TouchableOpacity>
+              </View>
             </View>
 
+            {/* Items */}
+            <View style={styles.card}>
+              <View style={styles.itemsHeader}>
+                <Text style={styles.sectionTitle}>Items</Text>
+                <View style={styles.countPill}>
+                  <Text style={styles.countPillText}>{order.items.length}</Text>
+                </View>
+              </View>
+
+              {order.items.length === 0 && (
+                <Text style={styles.stateText}>No items found.</Text>
+              )}
+
+              {order.items.map((item, index) => (
+                <View
+                  key={`${item.name}-${index}`}
+                  style={[
+                    styles.itemRow,
+                    index === order.items.length - 1 && styles.lastItemRow,
+                  ]}
+                >
+                  <Text style={styles.itemName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.qtyPill}>
+                    <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Fixed bottom button */}
+          <View style={styles.bottomContainer}>
             <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCall("Restaurant")}
-              activeOpacity={0.8}
+              style={styles.pickupButton}
+              activeOpacity={0.85}
+              onPress={handlePickup}
             >
-              <Ionicons
-                name="call"
-                size={17}
-                color={COLORS.white}
-              />
+              <Ionicons name="bag-check" size={22} color={COLORS.white} />
+              <Text style={styles.pickupButtonText}>Pick Up Order</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Delivery Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Deliver To</Text>
-
-          <View style={styles.locationRow}>
-            <View style={styles.locationIcon}>
-              <Ionicons
-                name="location"
-                size={19}
-                color={COLORS.green}
-              />
-            </View>
-
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationName}>
-                {order.customer}
-              </Text>
-
-              <Text style={styles.locationAddress}>
-                {order.customerAddress}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCall("Customer")}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="call"
-                size={17}
-                color={COLORS.white}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Items */}
-        <View style={styles.itemsSection}>
-          <Text style={styles.sectionTitle}>
-            Items ({order.items.length})
-          </Text>
-
-          {order.items.map((item, index) => (
-            <View
-              key={index}
-              style={[
-                styles.itemRow,
-                index === order.items.length - 1 &&
-                  styles.lastItemRow,
-              ]}
-            >
-              <Text style={styles.itemName}>
-                {item.name}
-              </Text>
-
-              <Text style={styles.itemQuantity}>
-                {item.quantity}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Fixed Bottom Button */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={styles.pickupButton}
-          activeOpacity={0.85}
-         onPress={() => router.push("/PickupScreen")}
-        >
-          <Text style={styles.pickupButtonText}>
-            Pick Up Order
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        </>
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -234,197 +341,299 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  
   // Header
   header: {
-    height: 72,
+    height: 64,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
-
   backButton: {
-    width: 32,
-    height: 38,
-    alignItems: "flex-start",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    alignItems: "center",
     justifyContent: "center",
   },
-
   headerTitle: {
     color: COLORS.white,
-    fontSize: 25,
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  headerRight: {
+    width: 40,
+  },
+
+  // States
+  centerBox: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 30,
+  },
+  stateText: {
+    color: COLORS.gray,
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: "center",
+  },
+  errorIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: COLORS.redSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  errorTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  retryButton: {
+    marginTop: 20,
+    height: 44,
+    paddingHorizontal: 28,
+    borderRadius: 22,
+    backgroundColor: COLORS.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  retryText: {
+    color: COLORS.white,
+    fontSize: 15,
     fontWeight: "700",
   },
 
-  headerRight: {
-    width: 32,
-  },
-
-  // Main Scroll
+  // Scroll
   scrollView: {
     flex: 1,
   },
-
   scrollContent: {
-    paddingHorizontal: 13,
-    paddingTop: 3,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
 
-  // Order Header
-  orderHeader: {
+  // Cards
+  card: {
     backgroundColor: COLORS.card,
-    borderRadius: 10,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    marginBottom: 18,
+    padding: 16,
+    marginBottom: 16,
   },
 
-  orderId: {
-    color: COLORS.white,
-    fontSize: 19,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-
-  amountRow: {
+  // Summary
+  summaryTop: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
-
-  amount: {
-    color: COLORS.gold,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-
-  separator: {
+  label: {
     color: COLORS.gray,
-    fontSize: 14,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginBottom: 2,
   },
-
-  itemCount: {
-    color: COLORS.gray,
-    fontSize: 18,
-  },
-
-  // Sections
-  section: {
-    backgroundColor: COLORS.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    marginBottom: 18,
-  },
-
-  sectionTitle: {
+  orderId: {
     color: COLORS.white,
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 7,
   },
-
-  locationRow: {
+  statusBadge: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: COLORS.redSoft,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-
-  locationIcon: {
-    width: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 5,
-  },
-
-  locationDetails: {
-    flex: 1,
-    justifyContent: "center",
-  },
-
-  locationName: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-
-  locationAddress: {
-    color: COLORS.gray,
-    fontSize: 16,
-    lineHeight: 18,
-  },
-
-  callButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 16,
+  badgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: COLORS.red,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 6,
+    marginRight: 6,
   },
-
-  // Items
-  itemsSection: {
-    backgroundColor: COLORS.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    paddingHorizontal: 9,
-    paddingTop: 12,
-    paddingBottom: 18,
+  statusText: {
+    color: COLORS.red,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
-
-  itemRow: {
-    minHeight: 28,
+  amountBox: {
+    marginTop: 16,
+    backgroundColor: COLORS.goldSoft,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#303030",
+    justifyContent: "space-between",
   },
-
-  lastItemRow: {
-    borderBottomWidth: 0,
-  },
-
-  itemName: {
-    color: COLORS.white,
-    fontSize: 18,
+  amountLabel: {
+    color: COLORS.lightGray,
+    fontSize: 14,
     fontWeight: "500",
   },
+  amount: {
+    color: COLORS.gold,
+    fontSize: 24,
+    fontWeight: "800",
+  },
 
-  itemQuantity: {
+  // Route
+  stopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  timeline: {
+    width: 38,
+    alignItems: "center",
+  },
+  stopIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickupIcon: {
+    backgroundColor: COLORS.goldSoft,
+  },
+  dropIcon: {
+    backgroundColor: COLORS.greenSoft,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 22,
+    backgroundColor: COLORS.cardBorder,
+    marginVertical: 4,
+  },
+  stopBody: {
+    flex: 1,
+    marginLeft: 12,
+    paddingBottom: 12,
+  },
+  stopTag: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  stopName: {
     color: COLORS.white,
     fontSize: 17,
     fontWeight: "600",
   },
-
-  // Bottom Button
-  bottomContainer: {
-    paddingHorizontal: 15,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === "web" ? 100 : 15,
-    backgroundColor: COLORS.background,
+  stopAddress: {
+    color: COLORS.gray,
+    fontSize: 14,
+    lineHeight: 19,
+    marginTop: 3,
+  },
+  callButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.red,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
 
+  // Items
+  itemsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  countPill: {
+    marginLeft: 8,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countPillText: {
+    color: COLORS.lightGray,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  itemRow: {
+    minHeight: 50,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cardBorder,
+  },
+  lastItemRow: {
+    borderBottomWidth: 0,
+  },
+  itemName: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "500",
+    paddingRight: 12,
+  },
+  qtyPill: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  itemQuantity: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  // Bottom button
+  bottomContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "web" ? 100 : 12,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.cardBorder,
+  },
   pickupButton: {
-    height: 46,
+    height: 52,
+    flexDirection: "row",
     backgroundColor: COLORS.red,
-    borderRadius: 20,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
+    shadowColor: COLORS.red,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
-
   pickupButtonText: {
     color: COLORS.white,
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: "700",
+    marginLeft: 8,
   },
 });
