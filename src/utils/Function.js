@@ -48,6 +48,12 @@ export const verifyDeliveryOtp = async (mobile, otp) => {
     otp,
   });
 };
+
+// DELIVERY LOGOUT API
+export const deliveryLogout = async () => {
+  return await postMethod("/api/delivery/logout", {});
+};
+
 export const getDeliveryHome = async () => {
   try {
     const response = await getMethod("/api/delivery/home");

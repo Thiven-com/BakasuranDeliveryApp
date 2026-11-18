@@ -1,16 +1,21 @@
-
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  Platform,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import {
+  getMonthlyEarningHistory,
+  getTodayEarningHistory,
+  getWeeklyEarningHistory,
+} from "../utils/Function";
 
 const COLORS = {
   background: "#050505",
@@ -21,92 +26,61 @@ const COLORS = {
   green: "#19D53B",
 };
 
-const earningData = {
-  Today: [
-    {
-      id: "#BSK100234",
-      time: "10:35 AM",
-      amount: "₹320",
-    },
-    {
-      id: "#BSK100233",
-      time: "09:50 AM",
-      amount: "₹280",
-    },
-    {
-      id: "#BSK100232",
-      time: "08:20 AM",
-      amount: "₹340",
-    },
-    {
-      id: "#BSK100231",
-      time: "07:40 AM",
-      amount: "₹300",
-    },
-  ],
-
-  Week: [
-    {
-      id: "#BSK100230",
-      time: "Yesterday",
-      amount: "₹350",
-    },
-    {
-      id: "#BSK100229",
-      time: "Yesterday",
-      amount: "₹290",
-    },
-    {
-      id: "#BSK100228",
-      time: "Monday",
-      amount: "₹420",
-    },
-    {
-      id: "#BSK100227",
-      time: "Monday",
-      amount: "₹310",
-    },
-  ],
-
-  Month: [
-    {
-      id: "#BSK100226",
-      time: "10 Nov",
-      amount: "₹380",
-    },
-    {
-      id: "#BSK100225",
-      time: "09 Nov",
-      amount: "₹260",
-    },
-    {
-      id: "#BSK100224",
-      time: "08 Nov",
-      amount: "₹450",
-    },
-    {
-      id: "#BSK100223",
-      time: "07 Nov",
-      amount: "₹320",
-    },
-  ],
-};
-
 export default function EarningHistoryScreen() {
   const [selectedFilter, setSelectedFilter] = useState("Today");
+  const [earnings, setEarnings] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const filters = ["Today", "Week", "Month"];
 
-  const currentEarnings = earningData[selectedFilter];
+  // Fetch earning history based on selected filter
+  const loadEarnings = async (filter) => {
+    try {
+      setLoading(true);
+      setEarnings([]);
+
+      let response;
+
+      if (filter === "Today") {
+        response = await getTodayEarningHistory();
+      } else if (filter === "Week") {
+        response = await getWeeklyEarningHistory();
+      } else {
+        response = await getMonthlyEarningHistory();
+      }
+
+      console.log(`${filter} Earnings Response:`, response);
+
+      if (response?.status === true) {
+        // Adjust this mapping after checking the actual API response.
+        const earningList = Array.isArray(response.data) ? response.data : [];
+
+        setEarnings(earningList);
+      } else {
+        setEarnings([]);
+
+        Alert.alert(
+          "Error",
+          response?.message || "Failed to load earning history",
+        );
+      }
+    } catch (error) {
+      console.log("Earning History Error:", error);
+      setEarnings([]);
+      Alert.alert("Error", "Unable to fetch earning history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load API whenever the selected filter changes
+  useEffect(() => {
+    loadEarnings(selectedFilter);
+  }, [selectedFilter]);
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
-
-      
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -115,16 +89,10 @@ export default function EarningHistoryScreen() {
           activeOpacity={0.7}
           onPress={() => router.back()}
         >
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          Earning History
-        </Text>
+        <Text style={styles.headerTitle}>Earning History</Text>
 
         <View style={styles.headerRight} />
       </View>
@@ -137,18 +105,12 @@ export default function EarningHistoryScreen() {
           return (
             <TouchableOpacity
               key={filter}
-              style={[
-                styles.filterButton,
-                isActive && styles.activeFilter,
-              ]}
+              style={[styles.filterButton, isActive && styles.activeFilter]}
               onPress={() => setSelectedFilter(filter)}
               activeOpacity={0.8}
             >
               <Text
-                style={[
-                  styles.filterText,
-                  isActive && styles.activeFilterText,
-                ]}
+                style={[styles.filterText, isActive && styles.activeFilterText]}
               >
                 {filter}
               </Text>
@@ -163,45 +125,48 @@ export default function EarningHistoryScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {currentEarnings.map((item) => (
-          <View key={item.id} style={styles.earningCard}>
-            {/* Completed Icon */}
-            <View style={styles.completedIcon}>
-              <Ionicons
-                name="checkmark"
-                size={13}
-                color="#FFFFFF"
-              />
-            </View>
-
-            {/* Order Information */}
-            <View style={styles.orderDetails}>
-              <Text style={styles.orderId}>
-                {item.id}
-              </Text>
-
-              <Text style={styles.deliveryTime}>
-                Delivered • {item.time}
-              </Text>
-            </View>
-
-            {/* Amount */}
-            <Text style={styles.amount}>
-              {item.amount}
-            </Text>
-          </View>
-        ))}
-
-        {currentEarnings.length === 0 && (
+        {loading ? (
           <View style={styles.emptyContainer}>
-            <Ionicons
-              name="receipt-outline"
-              size={35}
-              color={COLORS.gray}
-            />
-            <Text style={styles.emptyText}>
-              No earnings found
-            </Text>
+            <Text style={styles.emptyText}>Loading earnings...</Text>
+          </View>
+        ) : earnings.length > 0 ? (
+          earnings.map((item, index) => (
+            <View key={item.id ?? index} style={styles.earningCard}>
+              {/* Completed Icon */}
+              <View style={styles.completedIcon}>
+                <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+              </View>
+
+              {/* Order Information */}
+              <View style={styles.orderDetails}>
+                <Text style={styles.orderId}>
+                  {item.booking_number
+                    ? `#${item.booking_number}`
+                    : item.order_id
+                      ? `#${item.order_id}`
+                      : `Order #${index + 1}`}
+                </Text>
+
+                <Text style={styles.deliveryTime}>
+                  Delivered • {item.time || item.created_at || "--"}
+                </Text>
+              </View>
+
+              {/* Amount */}
+              <Text style={styles.amount}>
+                {item.amount != null
+                  ? `₹${item.amount}`
+                  : item.earning != null
+                    ? `₹${item.earning}`
+                    : "₹--"}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={35} color={COLORS.gray} />
+
+            <Text style={styles.emptyText}>No earnings found</Text>
           </View>
         )}
       </ScrollView>
@@ -214,8 +179,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-
-  
 
   // Header
   header: {
@@ -349,7 +312,7 @@ const styles = StyleSheet.create({
 
   emptyText: {
     color: COLORS.gray,
-    fontSize: 12,
+    fontSize: 14,
     marginTop: 10,
   },
 });
