@@ -18,6 +18,7 @@ export const getToken = async () => {
   try {
     return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
+
     console.log("Get Token Error:", error);
     return null;
   }
@@ -194,4 +195,29 @@ export const logout = async () => {
   }
 
   return response;
+};
+
+
+
+export const pickupOrder = async (orderId, pickupOtp) => {
+  return await postMethod(`/api/delivery/orders/${orderId}/pickup`, {
+    pickup_otp: pickupOtp,
+  });
+};
+export const getDeliveryEarnings = async () => {
+  return await getMethod("/api/delivery/earnings");
+};
+// Today's Earning History
+export const getTodayEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=today");
+};
+ 
+// Weekly Earning History
+export const getWeeklyEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=week");
+};
+ 
+// Monthly Earning History
+export const getMonthlyEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=month");
 };
