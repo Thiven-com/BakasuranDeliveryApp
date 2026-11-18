@@ -1,17 +1,18 @@
-
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  Platform,
-  Alert,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { getDeliveryEarnings } from "../../utils/Function";
 
 const COLORS = {
   background: "#050505",
@@ -24,23 +25,65 @@ const COLORS = {
   gold: "#F5B51B",
 };
 
+const formatCurrency = (value) =>
+  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
 export default function EarningsScreen() {
+  const [earnings, setEarnings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadEarnings = useCallback(async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true);
+
+      const response = await getDeliveryEarnings();
+
+      console.log("Earnings Response:", response);
+
+      if (response?.status === true) {
+        setEarnings(response.data);
+      } else {
+        Alert.alert("Error", response?.message || "Failed to load earnings");
+      }
+    } catch (error) {
+      console.log("Earnings Error:", error);
+      Alert.alert("Error", "Something went wrong while loading earnings");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEarnings();
+  }, [loadEarnings]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadEarnings(true);
+  };
+
+  const today = earnings?.today;
+  const thisWeek = earnings?.this_week;
+
   const stats = [
     {
       title: "Orders",
-      value: "12",
+      value: loading ? "..." : String(today?.orders ?? 0),
       icon: "gift-outline",
       color: COLORS.gold,
     },
     {
       title: "Incentives",
-      value: "₹700",
+      // API doesn't return incentives yet, so this shows ₹0 until it does
+      value: loading ? "..." : formatCurrency(today?.incentives),
       icon: "trophy",
       color: COLORS.gold,
     },
     {
       title: "Total",
-      value: "₹1,340",
+      value: loading ? "..." : formatCurrency(today?.earnings),
       icon: "wallet-outline",
       color: COLORS.white,
     },
@@ -49,29 +92,25 @@ export default function EarningsScreen() {
   const handleWithdraw = () => {
     Alert.alert(
       "Withdraw Earnings",
-      "Withdrawal functionality will be connected to the backend."
-    );
-  };
-
-  const handleWeeklyDetails = () => {
-    Alert.alert(
-      "Weekly Earnings",
-      "Weekly earnings details will be available here."
+      "Withdrawal functionality will be connected to the backend.",
     );
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
-
-      
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.red}
+            colors={[COLORS.red]}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -80,11 +119,7 @@ export default function EarningsScreen() {
             activeOpacity={0.7}
             onPress={() => router.back()}
           >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={COLORS.white}
-            />
+            <Ionicons name="chevron-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>My Earnings</Text>
@@ -94,12 +129,10 @@ export default function EarningsScreen() {
 
         {/* Today's Earnings */}
         <View style={styles.todayCard}>
-          <Text style={styles.todayLabel}>
-            Today's Earnings
-          </Text>
+          <Text style={styles.todayLabel}>Today's Earnings</Text>
 
           <Text style={styles.todayAmount}>
-            ₹1,240
+            {loading ? "..." : formatCurrency(today?.earnings)}
           </Text>
         </View>
 
@@ -107,19 +140,11 @@ export default function EarningsScreen() {
         <View style={styles.statsContainer}>
           {stats.map((item, index) => (
             <View key={index} style={styles.statCard}>
-              <Ionicons
-                name={item.icon}
-                size={23}
-                color={item.color}
-              />
+              <Ionicons name={item.icon} size={23} color={item.color} />
 
-              <Text style={styles.statTitle}>
-                {item.title}
-              </Text>
+              <Text style={styles.statTitle}>{item.title}</Text>
 
-              <Text style={styles.statValue}>
-                {item.value}
-              </Text>
+              <Text style={styles.statValue}>{item.value}</Text>
             </View>
           ))}
         </View>
@@ -130,33 +155,25 @@ export default function EarningsScreen() {
           activeOpacity={0.8}
           onPress={handleWithdraw}
         >
-          <Text style={styles.withdrawText}>
-            Withdraw Earnings
-          </Text>
+          <Text style={styles.withdrawText}>Withdraw Earnings</Text>
         </TouchableOpacity>
 
-          {/* Weekly Earnings */}
-         <TouchableOpacity
-              style={styles.weekCard}
-            activeOpacity={0.8}
-           onPress={() => router.push("/EarningHistoryScreen")}
-          >
-            <View>
-           <Text style={styles.weekLabel}>
-             This Week
-           </Text>
+        {/* Weekly Earnings */}
+        <TouchableOpacity
+          style={styles.weekCard}
+          activeOpacity={0.8}
+          onPress={() => router.push("/EarningHistoryScreen")}
+        >
+          <View>
+            <Text style={styles.weekLabel}>This Week</Text>
 
             <Text style={styles.weekAmount}>
-                ₹8,560
-             </Text>
-               </View>
+              {loading ? "..." : formatCurrency(thisWeek?.earnings)}
+            </Text>
+          </View>
 
-                  <Ionicons
-                   name="chevron-forward"
-                   size={22}
-                   color={COLORS.white}
-                    />
-           </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={22} color={COLORS.white} />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -173,8 +190,6 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "android" ? 12 : 5,
     paddingBottom: 25,
   },
-
-  
 
   // Header
   header: {

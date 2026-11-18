@@ -1,15 +1,19 @@
-
 import {
+  ActivityIndicator,
+  Alert,
   Image,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useState } from "react";
+import { deliveryLogout, removeToken } from "../../utils/Function";
 
 const COLORS = {
   background: "#050505",
@@ -22,6 +26,7 @@ const COLORS = {
 };
 
 export default function ProfileScreen() {
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const menuItems = [
     {
@@ -55,13 +60,59 @@ export default function ProfileScreen() {
     router.push(item.route);
   };
 
+  // Does the actual logout. Always clears the token and navigates,
+  // even if the API call fails or hangs.
+  const performLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+
+    try {
+      // Don't let a slow or failed API call block logout (5s max)
+      await Promise.race([
+        deliveryLogout(),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
+      ]);
+    } catch (error) {
+      console.log("deliveryLogout failed:", error);
+    }
+
+    try {
+      await removeToken();
+      console.log("Token removed");
+    } catch (error) {
+      console.log("removeToken failed:", error);
+    }
+
+    setLoggingOut(false);
+    router.replace("/LogInScreen");
+  };
+
+  const handleLogout = () => {
+    // Alert.alert with buttons does nothing on Expo web,
+    // so use window.confirm there.
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to log out?")) {
+        performLogout();
+      }
+      return;
+    }
+
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: performLogout,
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
-
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -70,23 +121,16 @@ export default function ProfileScreen() {
           activeOpacity={0.7}
           onPress={() => router.back()}
         >
-          <Ionicons
-            name="chevron-back"
-            size={23}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={23} color={COLORS.white} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          My Profile
-        </Text>
+        <Text style={styles.headerTitle}>My Profile</Text>
 
         <View style={styles.headerRight} />
       </View>
 
       {/* Profile Information */}
       <View style={styles.profileSection}>
-
         {/* Profile Image */}
         <View style={styles.profileImageWrapper}>
           <Image
@@ -97,28 +141,17 @@ export default function ProfileScreen() {
         </View>
 
         {/* Name */}
-        <Text style={styles.profileName}>
-          Raju Kumar
-        </Text>
+        <Text style={styles.profileName}>Raju Kumar</Text>
 
         {/* Role */}
-        <Text style={styles.profileRole}>
-          Delivery Partner
-        </Text>
+        <Text style={styles.profileRole}>Delivery Partner</Text>
 
         {/* Verified Badge */}
         <View style={styles.verifiedBadge}>
-          <Ionicons
-            name="checkmark-circle"
-            size={12}
-            color={COLORS.white}
-          />
+          <Ionicons name="checkmark-circle" size={12} color={COLORS.white} />
 
-          <Text style={styles.verifiedText}>
-            Verified
-          </Text>
+          <Text style={styles.verifiedText}>Verified</Text>
         </View>
-
       </View>
 
       {/* Profile Menu */}
@@ -131,26 +164,32 @@ export default function ProfileScreen() {
             onPress={() => handleMenuPress(item)}
           >
             <View style={styles.menuLeft}>
-              <Ionicons
-                name={item.icon}
-                size={19}
-                color={COLORS.white}
-              />
+              <Ionicons name={item.icon} size={19} color={COLORS.white} />
 
-              <Text style={styles.menuTitle}>
-                {item.title}
-              </Text>
+              <Text style={styles.menuTitle}>{item.title}</Text>
             </View>
 
-            <Ionicons
-              name="chevron-forward"
-              size={23}
-              color={COLORS.white}
-            />
+            <Ionicons name="chevron-forward" size={23} color={COLORS.white} />
           </TouchableOpacity>
         ))}
       </View>
 
+      {/* Logout */}
+      <TouchableOpacity
+        style={styles.logoutButton}
+        activeOpacity={0.75}
+        onPress={handleLogout}
+        disabled={loggingOut}
+      >
+        {loggingOut ? (
+          <ActivityIndicator size="small" color={COLORS.white} />
+        ) : (
+          <>
+            <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -161,7 +200,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  
   // Header
   header: {
     height: 73,
@@ -270,5 +308,23 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 20,
     fontWeight: "500",
+  },
+
+  logoutButton: {
+    height: 52,
+    marginTop: 18,
+    marginHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: COLORS.red,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  logoutText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
   },
 });

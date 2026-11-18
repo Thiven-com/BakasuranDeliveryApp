@@ -49,6 +49,12 @@ export const verifyDeliveryOtp = async (mobile, otp) => {
     otp,
   });
 };
+
+// DELIVERY LOGOUT API
+export const deliveryLogout = async () => {
+  return await postMethod("/api/delivery/logout", {});
+};
+
 export const getDeliveryHome = async () => {
   try {
     const response = await getMethod("/api/delivery/home");
@@ -70,4 +76,26 @@ export const acceptOrder = async (orderId) => {
 };
 export const getOrderDetails = async (orderId) => {
   return await getMethod(`/api/delivery/orders/${orderId}/details`);
+};
+export const pickupOrder = async (orderId, pickupOtp) => {
+  return await postMethod(`/api/delivery/orders/${orderId}/pickup`, {
+    pickup_otp: pickupOtp,
+  });
+};
+export const getDeliveryEarnings = async () => {
+  return await getMethod("/api/delivery/earnings");
+};
+// Today's Earning History
+export const getTodayEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=today");
+};
+
+// Weekly Earning History
+export const getWeeklyEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=week");
+};
+
+// Monthly Earning History
+export const getMonthlyEarningHistory = async () => {
+  return await getMethod("/api/delivery/earning-history?period=month");
 };
