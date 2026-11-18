@@ -1,16 +1,18 @@
+
 import { useState } from "react";
 
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -20,10 +22,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "../constants/Colors";
 import Fonts from "../constants/Fonts";
+import { postMethod } from "../utils/APIServices";
 
 export default function BankDetailsScreen() {
   const router = useRouter();
 
+  // Initial bank details
   const initialDetails = {
     accountHolder: "Raju Kumar",
     accountNumber: "123456789012",
@@ -35,9 +39,12 @@ export default function BankDetailsScreen() {
 
   const [details, setDetails] = useState(initialDetails);
   const [savedDetails, setSavedDetails] = useState(initialDetails);
+
   const [isEditing, setIsEditing] = useState(false);
   const [isVerified, setIsVerified] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Update input fields
   const updateField = (field, value) => {
     setDetails((previous) => ({
       ...previous,
@@ -45,77 +52,145 @@ export default function BankDetailsScreen() {
     }));
   };
 
+  // Edit bank details
   const handleEdit = () => {
     setIsEditing(true);
   };
 
+  // Cancel editing
   const handleCancel = () => {
     setDetails(savedDetails);
     setIsEditing(false);
   };
 
-  const handleSave = () => {
+  // ============================================
+  // UPDATE BANK DETAILS API
+  // POST api/delivery/bank-details/update
+  // ============================================
+
+  const handleSave = async () => {
+    if (isSaving) return;
+
+    // Validate required fields
     const requiredFields = [
       details.accountHolder,
       details.accountNumber,
       details.ifscCode,
       details.bankName,
-      details.branch,
     ];
 
     if (requiredFields.some((value) => !value.trim())) {
-      Alert.alert("Required", "Please fill all required bank details.");
+      Alert.alert(
+        "Required Fields",
+        "Please fill all required bank details."
+      );
       return;
     }
 
-    if (!/^\d{9,18}$/.test(details.accountNumber)) {
+    // Account number validation
+    const accountNumber = details.accountNumber.trim();
+
+    if (!/^\d{9,18}$/.test(accountNumber)) {
       Alert.alert(
         "Invalid Account Number",
-        "Enter a valid account number containing 9 to 18 digits.",
+        "Enter a valid account number containing 9 to 18 digits."
       );
       return;
     }
 
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(details.ifscCode.toUpperCase())) {
+    // IFSC validation
+    const ifscCode = details.ifscCode.trim().toUpperCase();
+
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) {
       Alert.alert(
-        "Invalid IFSC",
-        "Please enter a valid 11-character IFSC code.",
+        "Invalid IFSC Code",
+        "Please enter a valid 11-character IFSC code."
       );
       return;
     }
 
-    const updatedDetails = {
-      ...details,
-      accountHolder: details.accountHolder.trim(),
-      accountNumber: details.accountNumber.trim(),
-      ifscCode: details.ifscCode.trim().toUpperCase(),
-      bankName: details.bankName.trim(),
-      branch: details.branch.trim(),
-      upiId: details.upiId.trim(),
+    // API request body
+    const payload = {
+      account_number: accountNumber,
+      account_holder_name: details.accountHolder.trim(),
+      bank_name: details.bankName.trim(),
+      ifsc_code: ifscCode,
     };
 
-    const bankInfoChanged =
-      updatedDetails.accountHolder !== savedDetails.accountHolder ||
-      updatedDetails.accountNumber !== savedDetails.accountNumber ||
-      updatedDetails.ifscCode !== savedDetails.ifscCode ||
-      updatedDetails.bankName !== savedDetails.bankName ||
-      updatedDetails.branch !== savedDetails.branch;
+    try {
+      setIsSaving(true);
 
-    setDetails(updatedDetails);
-    setSavedDetails(updatedDetails);
-    setIsEditing(false);
+      console.log("================================");
+      console.log("BANK DETAILS UPDATE START");
+      console.log("================================");
 
-    if (bankInfoChanged) {
-      setIsVerified(false);
+      console.log("REQUEST BODY:", payload);
+
+      // Call POST API
+      const response = await postMethod(
+        "api/delivery/bank-details/update",
+        payload
+      );
+
+      console.log("BANK DETAILS API RESPONSE:", response);
+
+      console.log("================================");
+      console.log("BANK DETAILS UPDATE END");
+      console.log("================================");
+
+      // Your postMethod returns response.data directly.
+      // It returns success: 0 when an API error occurs.
+
+      if (
+        response?.success === 1 ||
+        response?.success === true ||
+        response?.success === "1"
+      ) {
+        const updatedDetails = {
+          ...details,
+          accountHolder: payload.account_holder_name,
+          accountNumber: payload.account_number,
+          bankName: payload.bank_name,
+          ifscCode: payload.ifsc_code,
+        };
+
+        setDetails(updatedDetails);
+        setSavedDetails(updatedDetails);
+        setIsEditing(false);
+        setIsVerified(false);
+
+        Alert.alert(
+          "Success",
+          response?.message ||
+            "Bank details updated successfully."
+        );
+      } else {
+        Alert.alert(
+          "Update Failed",
+          response?.message ||
+            "Unable to update bank details. Please try again."
+        );
+      }
+    } catch (error) {
+      console.log(
+        "BANK DETAILS ERROR:",
+        error?.response?.data || error?.message
+      );
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
     }
-
-    Alert.alert(
-      "Saved",
-      bankInfoChanged
-        ? "Bank details saved locally. Bank verification is required."
-        : "Bank details saved locally.",
-    );
   };
+
+  // ============================================
+  // REUSABLE DETAIL CARD
+  // ============================================
 
   const DetailCard = ({
     icon,
@@ -128,11 +203,17 @@ export default function BankDetailsScreen() {
   }) => (
     <View style={styles.detailCard}>
       <View style={styles.detailIcon}>
-        <Ionicons name={icon} size={27} color={Colors.white} />
+        <Ionicons
+          name={icon}
+          size={27}
+          color={Colors.white}
+        />
       </View>
 
       <View style={styles.detailContent}>
-        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailLabel}>
+          {label}
+        </Text>
 
         {isEditing ? (
           <TextInput
@@ -144,30 +225,50 @@ export default function BankDetailsScreen() {
             keyboardType={keyboardType}
             autoCapitalize={autoCapitalize}
             secureTextEntry={secure}
+            editable={!isSaving}
           />
         ) : (
           <Text style={styles.detailValue}>
-            {secure ? `•••• •••• ${value.slice(-4)}` : value}
+            {secure
+              ? `•••• •••• ${value.slice(-4)}`
+              : value}
           </Text>
         )}
       </View>
     </View>
   );
 
+  // ============================================
+  // SECTION HEADER
+  // ============================================
+
   const SectionHeader = ({ icon, title }) => (
     <LinearGradient
       colors={["#260606", "#100303"]}
       style={styles.sectionHeader}
     >
-      <Ionicons name={icon} size={27} color={Colors.primary} />
+      <Ionicons
+        name={icon}
+        size={27}
+        color={Colors.primary}
+      />
 
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle}>
+        {title}
+      </Text>
     </LinearGradient>
   );
 
+  // ============================================
+  // SCREEN UI
+  // ============================================
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.background}
+      />
 
       <LinearGradient
         colors={Colors.gradients.background}
@@ -188,15 +289,23 @@ export default function BankDetailsScreen() {
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
+                disabled={isSaving}
               >
-                <Ionicons name="chevron-back" size={28} color={Colors.white} />
+                <Ionicons
+                  name="chevron-back"
+                  size={28}
+                  color={Colors.white}
+                />
               </TouchableOpacity>
 
-              <Text style={styles.headerTitle}>Bank Details</Text>
+              <Text style={styles.headerTitle}>
+                Bank Details
+              </Text>
 
               <TouchableOpacity
                 style={styles.editIconButton}
                 onPress={isEditing ? handleCancel : handleEdit}
+                disabled={isSaving}
               >
                 <Ionicons
                   name={isEditing ? "close" : "create-outline"}
@@ -214,11 +323,19 @@ export default function BankDetailsScreen() {
                 style={styles.bankIllustration}
               >
                 <View style={styles.bankIconContainer}>
-                  <Ionicons name="business" size={105} color={Colors.white} />
+                  <Ionicons
+                    name="business"
+                    size={105}
+                    color={Colors.white}
+                  />
                 </View>
 
                 <View style={styles.bankCheckIcon}>
-                  <Ionicons name="checkmark" size={30} color={Colors.white} />
+                  <Ionicons
+                    name="checkmark"
+                    size={30}
+                    color={Colors.white}
+                  />
                 </View>
               </LinearGradient>
 
@@ -229,7 +346,11 @@ export default function BankDetailsScreen() {
                 ]}
               >
                 <Ionicons
-                  name={isVerified ? "checkmark" : "time-outline"}
+                  name={
+                    isVerified
+                      ? "checkmark"
+                      : "time-outline"
+                  }
                   size={23}
                   color={Colors.white}
                 />
@@ -294,21 +415,29 @@ export default function BankDetailsScreen() {
 
             {/* UPI INFORMATION */}
 
-            <SectionHeader icon="paper-plane-outline" title="UPI Information" />
+            <SectionHeader
+              icon="paper-plane-outline"
+              title="UPI Information"
+            />
 
             <View style={styles.upiCard}>
               <View style={styles.upiContent}>
-                <Text style={styles.upiLabel}>UPI ID</Text>
+                <Text style={styles.upiLabel}>
+                  UPI ID
+                </Text>
 
                 {isEditing ? (
                   <TextInput
                     style={styles.upiInput}
                     value={details.upiId}
-                    onChangeText={(text) => updateField("upiId", text)}
+                    onChangeText={(text) =>
+                      updateField("upiId", text)
+                    }
                     placeholder="Enter UPI ID"
                     placeholderTextColor={Colors.placeholder}
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    editable={!isSaving}
                   />
                 ) : (
                   <Text style={styles.upiValue}>
@@ -322,8 +451,12 @@ export default function BankDetailsScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={styles.buttonWrapper}
+              style={[
+                styles.buttonWrapper,
+                isSaving && { opacity: 0.6 },
+              ]}
               onPress={isEditing ? handleSave : handleEdit}
+              disabled={isSaving}
             >
               <LinearGradient
                 colors={Colors.gradients.primary}
@@ -331,29 +464,68 @@ export default function BankDetailsScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.saveButton}
               >
-                <Ionicons
-                  name={
-                    isEditing ? "checkmark-circle-outline" : "create-outline"
-                  }
-                  size={26}
-                  color={Colors.white}
-                />
+                {isSaving ? (
+                  <>
+                    <ActivityIndicator
+                      size="small"
+                      color={Colors.white}
+                    />
 
-                <Text style={styles.saveButtonText}>
-                  {isEditing ? "Save Bank Details" : "Edit Bank Details"}
-                </Text>
+                    <Text style={styles.saveButtonText}>
+                      Updating...
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons
+                      name={
+                        isEditing
+                          ? "checkmark-circle-outline"
+                          : "create-outline"
+                      }
+                      size={26}
+                      color={Colors.white}
+                    />
+
+                    <Text style={styles.saveButtonText}>
+                      {isEditing
+                        ? "Save Bank Details"
+                        : "Edit Bank Details"}
+                    </Text>
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* CANCEL BUTTON */}
+
+            {isEditing && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancel}
+                disabled={isSaving}
+              >
+                <Text style={styles.cancelButtonText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {/* FOOTER */}
 
-            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
+            <Text style={styles.footerText}>
+              BAKASURAN DELIVERY PARTNER
+            </Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
     </SafeAreaView>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -587,6 +759,17 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 18,
     fontFamily: Fonts.extraBold,
+  },
+
+  cancelButton: {
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+
+  cancelButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontFamily: Fonts.bold,
   },
 
   // FOOTER

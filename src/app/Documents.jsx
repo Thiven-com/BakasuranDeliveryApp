@@ -1,17 +1,21 @@
+
 import { useState } from "react";
 
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -19,153 +23,72 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "../constants/Colors";
 import Fonts from "../constants/Fonts";
+import { postMethod } from "../utils/APIServices";
 
-// Sample document data.
-// Replace sample verification statuses with backend data in production.
+// =====================================================
+// API CONFIG
+// =====================================================
 
-const INITIAL_DOCUMENTS = [
+const UPLOAD_ENDPOINT = "api/delivery/documents/upload";
+
+const IMAGE_FIELDS = [
   {
-    id: "1",
-    title: "Identity Proof (Aadhaar)",
-    description: "Aadhaar Card (Front & Back)",
-    icon: "person-outline",
-    iconColor: "#F10D16",
-    background: "#650B12",
-    status: "Verified",
-    fileName: "aadhaar_card.pdf",
+    key: "aadhar_front_image",
+    title: "Aadhaar Front Image",
+    description: "Select the front side of your Aadhaar card",
+    icon: "card-outline",
   },
   {
-    id: "2",
-    title: "Address Proof",
-    description: "Aadhaar / Voter ID / Driving Licence",
+    key: "aadhar_back_image",
+    title: "Aadhaar Back Image",
+    description: "Select the back side of your Aadhaar card",
+    icon: "card-outline",
+  },
+  {
+    key: "pan_image",
+    title: "PAN Card Image",
+    description: "Select a clear image of your PAN card",
     icon: "id-card-outline",
-    iconColor: "#FFC107",
-    background: "#715600",
-    status: "Verified",
-    fileName: "address_proof.pdf",
-  },
-  {
-    id: "3",
-    title: "Driving Licence",
-    description: "Valid Driving Licence",
-    icon: "car-sport-outline",
-    iconColor: "#03A9F4",
-    background: "#064B70",
-    status: "Verified",
-    fileName: "driving_licence.pdf",
-  },
-  {
-    id: "4",
-    title: "Vehicle RC",
-    description: "Registration Certificate (RC)",
-    icon: "bicycle-outline",
-    iconColor: "#D946EF",
-    background: "#581078",
-    status: "Verified",
-    fileName: "vehicle_rc.pdf",
-  },
-  {
-    id: "5",
-    title: "Vehicle Insurance",
-    description: "Valid Vehicle Insurance",
-    icon: "shield-checkmark-outline",
-    iconColor: "#00BCD4",
-    background: "#075B65",
-    status: "Verified",
-    fileName: "vehicle_insurance.pdf",
-  },
-  {
-    id: "6",
-    title: "Selfie / Live Photo",
-    description: "Your clear photo for verification",
-    icon: "person-circle-outline",
-    iconColor: "#F06292",
-    background: "#791638",
-    status: "Pending",
-    fileName: null,
-    isSelfie: true,
   },
 ];
+
+const ALLOWED_TYPES = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+// =====================================================
+// DOCUMENT SCREEN
+// =====================================================
 
 export default function DocumentsScreen() {
   const router = useRouter();
 
-  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
-  const [uploadingId, setUploadingId] = useState(null);
+  const [aadharNumber, setAadharNumber] = useState("");
+  const [panNumber, setPanNumber] = useState("");
 
-  // Verification progress
+  const [files, setFiles] = useState({
+    aadhar_front_image: null,
+    aadhar_back_image: null,
+    pan_image: null,
+  });
 
-  const verifiedCount = documents.filter(
-    (item) => item.status === "Verified",
-  ).length;
+  const [uploadingField, setUploadingField] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const totalDocuments = documents.length;
+  const selectedCount = Object.values(files).filter(Boolean).length;
+  const totalCount = IMAGE_FIELDS.length;
+  const progress = Math.round((selectedCount / totalCount) * 100);
 
-  const progress = totalDocuments ? verifiedCount / totalDocuments : 0;
+  // =====================================================
+  // SELECT IMAGE - WEB / ANDROID / IOS
+  // =====================================================
 
-  const progressPercentage = Math.round(progress * 100);
-
-  // Update document after successful selection
-
-  const updateDocument = (id, file) => {
-    setDocuments((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              fileName: file.name,
-              fileUri: file.uri,
-              status: "Under Review",
-            }
-          : item,
-      ),
-    );
-
-    Alert.alert(
-      "Document Uploaded",
-      "Your document has been selected successfully and is awaiting verification.",
-    );
-  };
-
-  // Pick document from device
-
-  const handleDocumentUpload = async (document) => {
+  const selectImage = async (fieldKey) => {
     try {
-      setUploadingId(document.id);
-
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "image/*"],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (result.canceled) {
-        return;
-      }
-
-      const selectedFile = result.assets?.[0];
-
-      if (!selectedFile) {
-        Alert.alert("Error", "Unable to select the document.");
-        return;
-      }
-
-      updateDocument(document.id, selectedFile);
-    } catch (error) {
-      Alert.alert(
-        "Upload Error",
-        "Unable to select your document. Please try again.",
-      );
-    } finally {
-      setUploadingId(null);
-    }
-  };
-
-  // Pick selfie from gallery
-
-  const handleSelfieUpload = async (document) => {
-    try {
-      setUploadingId(document.id);
+      setUploadingField(fieldKey);
 
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -173,7 +96,7 @@ export default function DocumentsScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Permission Required",
-          "Please allow photo library access to select your selfie.",
+          "Please allow gallery access to select your document."
         );
         return;
       }
@@ -181,173 +104,433 @@ export default function DocumentsScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
-        aspect: [1, 1],
         quality: 0.8,
+        exif: false,
       });
 
-      if (result.canceled) {
-        return;
+      if (result.canceled) return;
+
+      const asset = result.assets?.[0];
+
+      if (!asset?.uri) {
+        throw new Error("Selected image is not available.");
       }
 
-      const selectedImage = result.assets?.[0];
+      let imageFile;
 
-      if (!selectedImage) {
-        Alert.alert("Error", "Unable to select your photo.");
-        return;
+      // ---------------- WEB ----------------
+
+      if (Platform.OS === "web") {
+        const imageResponse = await fetch(asset.uri);
+
+        if (!imageResponse.ok) {
+          throw new Error("Unable to read the selected image.");
+        }
+
+        const imageBlob = await imageResponse.blob();
+
+        let mimeType = (
+          imageBlob.type ||
+          asset.mimeType ||
+          ""
+        ).toLowerCase();
+
+        if (mimeType === "image/jpg") {
+          mimeType = "image/jpeg";
+        }
+
+        const extension = ALLOWED_TYPES[mimeType];
+
+        if (!extension) {
+          throw new Error(
+            "Please select a JPG, JPEG, PNG, or WEBP image."
+          );
+        }
+
+        if (typeof File === "undefined") {
+          throw new Error("Browser File upload is not supported.");
+        }
+
+        imageFile = new File(
+          [imageBlob],
+          `document_${Date.now()}.${extension}`,
+          { type: mimeType }
+        );
+      } else {
+        // ---------------- ANDROID / IOS ----------------
+
+        let mimeType = (
+          asset.mimeType || "image/jpeg"
+        ).toLowerCase();
+
+        if (mimeType === "image/jpg") {
+          mimeType = "image/jpeg";
+        }
+
+        const extension = ALLOWED_TYPES[mimeType];
+
+        if (!extension) {
+          throw new Error(
+            "Please select a JPG, JPEG, PNG, or WEBP image."
+          );
+        }
+
+        imageFile = {
+          uri: asset.uri,
+          name:
+            asset.fileName ||
+            `document_${Date.now()}.${extension}`,
+          type: mimeType,
+        };
       }
 
-      updateDocument(document.id, {
-        name: selectedImage.fileName || "selfie.jpg",
-        uri: selectedImage.uri,
+      setFiles((previous) => ({
+        ...previous,
+        [fieldKey]: imageFile,
+      }));
+
+      console.log("SELECTED IMAGE:", fieldKey, {
+        name: imageFile.name,
+        type: imageFile.type,
+        platform: Platform.OS,
       });
     } catch (error) {
+      console.log("IMAGE PICKER ERROR:", error?.message);
+
       Alert.alert(
-        "Upload Error",
-        "Unable to select your photo. Please try again.",
+        "Image Selection Error",
+        error?.message || "Unable to select image."
       );
     } finally {
-      setUploadingId(null);
+      setUploadingField(null);
     }
   };
 
-  // Upload action
+  // =====================================================
+  // REMOVE IMAGE
+  // =====================================================
 
-  const handleUpload = (document) => {
-    if (document.isSelfie) {
-      handleSelfieUpload(document);
+  const removeImage = (fieldKey) => {
+    setFiles((previous) => ({
+      ...previous,
+      [fieldKey]: null,
+    }));
+  };
+
+  // =====================================================
+  // VALIDATE FORM
+  // =====================================================
+
+  const validateForm = () => {
+    const cleanAadhar = String(aadharNumber || "").replace(/\D/g, "");
+    const cleanPan = String(panNumber || "").trim().toUpperCase();
+
+    if (!/^\d{12}$/.test(cleanAadhar)) {
+      Alert.alert(
+        "Invalid Aadhaar",
+        "Enter a valid 12-digit Aadhaar number."
+      );
+      return false;
+    }
+
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
+      Alert.alert(
+        "Invalid PAN",
+        "Enter a valid 10-character PAN number."
+      );
+      return false;
+    }
+
+    if (!files.aadhar_front_image) {
+      Alert.alert(
+        "Missing Image",
+        "Select Aadhaar front image."
+      );
+      return false;
+    }
+
+    if (!files.aadhar_back_image) {
+      Alert.alert(
+        "Missing Image",
+        "Select Aadhaar back image."
+      );
+      return false;
+    }
+
+    if (!files.pan_image) {
+      Alert.alert(
+        "Missing Image",
+        "Select PAN card image."
+      );
+      return false;
+    }
+
+    console.log("VALIDATION SUCCESS");
+
+    return true;
+  };
+
+  // =====================================================
+  // APPEND IMAGE TO FORM DATA
+  // =====================================================
+
+  const appendImage = (formData, fieldKey) => {
+    const file = files[fieldKey];
+
+    if (!file) {
+      throw new Error(`${fieldKey} is missing.`);
+    }
+
+    if (Platform.OS === "web") {
+      if (
+        typeof File === "undefined" ||
+        !(file instanceof File)
+      ) {
+        throw new Error(
+          `${fieldKey} is not a valid browser File. Please select it again.`
+        );
+      }
+
+      // Web: append actual browser File.
+      formData.append(fieldKey, file, file.name);
     } else {
-      handleDocumentUpload(document);
+      // Android / iOS: append native file object.
+      if (!file.uri) {
+        throw new Error(`${fieldKey} image URI is missing.`);
+      }
+
+      formData.append(fieldKey, {
+        uri: file.uri,
+        name: file.name,
+        type: file.type,
+      });
     }
+
+    console.log("IMAGE APPENDED:", fieldKey, file.name);
   };
 
-  // View selected document
+  // =====================================================
+  // SUBMIT DOCUMENTS API
+  // =====================================================
 
-  const handleViewDocument = (document) => {
-    if (!document.fileUri) {
-      Alert.alert("Document", "No document has been selected yet.");
+  const handleSubmit = async () => {
+    console.log("========== DOCUMENT UPLOAD START ==========");
+
+    if (submitting) {
+      console.log("UPLOAD ALREADY IN PROGRESS");
       return;
     }
 
-    Alert.alert(
-      document.title,
-      `Selected file: ${document.fileName}\n\nA document preview can be added here.`,
-    );
+    if (!validateForm()) {
+      console.log("VALIDATION FAILED - API NOT CALLED");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const formData = new FormData();
+
+      // Text fields
+      formData.append(
+        "aadhar_number",
+        String(aadharNumber).replace(/\D/g, "")
+      );
+
+      formData.append(
+        "pan_number",
+        String(panNumber).trim().toUpperCase()
+      );
+
+      // Image fields
+      IMAGE_FIELDS.forEach((field) => {
+        appendImage(formData, field.key);
+      });
+
+      console.log("========== FORM DATA READY ==========");
+      console.log("TEXT FIELDS: ADDED");
+      console.log("IMAGE FIELDS: ADDED");
+      console.log("API URL:", UPLOAD_ENDPOINT);
+      console.log("CALLING POST METHOD...");
+
+      const response = await postMethod(
+        UPLOAD_ENDPOINT,
+        formData
+      );
+
+      console.log("========== API RESPONSE ==========");
+      console.log(JSON.stringify(response, null, 2));
+
+      const isSuccess =
+        response?.status === true ||
+        response?.status === 1 ||
+        response?.status === "1";
+
+      if (isSuccess) {
+        Alert.alert(
+          "Success",
+          response?.message ||
+            "Documents uploaded successfully.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        const validationErrors = response?.errors;
+
+        const errorMessage = validationErrors
+          ? Object.entries(validationErrors)
+              .map(([key, messages]) => {
+                return `${key}: ${
+                  Array.isArray(messages)
+                    ? messages.join(", ")
+                    : messages
+                }`;
+              })
+              .join("\n")
+          : response?.message ||
+            "The server did not accept the documents.";
+
+        Alert.alert("Upload Failed", errorMessage);
+      }
+    } catch (error) {
+      console.log("========== DOCUMENT UPLOAD ERROR ==========");
+      console.log("MESSAGE:", error?.message);
+
+      Alert.alert(
+        "Upload Error",
+        error?.message ||
+          "Unable to upload documents."
+      );
+    } finally {
+      setSubmitting(false);
+      console.log("========== DOCUMENT UPLOAD END ==========");
+    }
   };
 
-  // Document status badge
+  // =====================================================
+  // IMAGE CARD
+  // =====================================================
 
-  const StatusBadge = ({ status }) => {
-    const statusConfig = {
-      Verified: {
-        background: Colors.success,
-        icon: "checkmark-circle",
-      },
-      Pending: {
-        background: Colors.primary,
-        icon: "cloud-upload-outline",
-      },
-      "Under Review": {
-        background: Colors.warning,
-        icon: "time-outline",
-      },
-      Rejected: {
-        background: Colors.error,
-        icon: "close-circle-outline",
-      },
-    };
-
-    const config = statusConfig[status] || statusConfig.Pending;
+  const renderImageCard = (field) => {
+    const file = files[field.key];
+    const isSelecting = uploadingField === field.key;
 
     return (
-      <View
-        style={[styles.statusBadge, { backgroundColor: config.background }]}
-      >
-        <Ionicons name={config.icon} size={16} color={Colors.white} />
+      <View key={field.key} style={styles.documentCard}>
+        <View style={styles.documentCardHeader}>
+          <View style={styles.documentIcon}>
+            <Ionicons
+              name={field.icon}
+              size={25}
+              color={Colors.primary}
+            />
+          </View>
 
-        <Text style={styles.statusText}>{status}</Text>
+          <View style={styles.documentInfo}>
+            <Text style={styles.documentTitle}>
+              {field.title}
+            </Text>
+
+            <Text style={styles.documentDescription}>
+              {field.description}
+            </Text>
+          </View>
+        </View>
+
+        {file ? (
+          <View style={styles.selectedFileBox}>
+            <View style={styles.selectedFileInfo}>
+              <Ionicons
+                name="image-outline"
+                size={21}
+                color={Colors.success}
+              />
+
+              <Text
+                style={styles.fileName}
+                numberOfLines={1}
+              >
+                {file.name}
+              </Text>
+            </View>
+
+            <View style={styles.fileActions}>
+              <TouchableOpacity
+                onPress={() => selectImage(field.key)}
+                disabled={submitting}
+                style={styles.changeButton}
+              >
+                <Text style={styles.changeButtonText}>
+                  Change
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => removeImage(field.key)}
+                disabled={submitting}
+                style={styles.removeButton}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={19}
+                  color={Colors.error}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={() => selectImage(field.key)}
+            disabled={isSelecting || submitting}
+            activeOpacity={0.8}
+          >
+            {isSelecting ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <>
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={20}
+                  color={Colors.white}
+                />
+
+                <Text style={styles.uploadButtonText}>
+                  Choose Image
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
 
-  // Individual document card
-
-  const DocumentCard = ({ item }) => {
-    const isUploading = uploadingId === item.id;
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.documentCard}
-        onPress={() =>
-          item.fileUri ? handleViewDocument(item) : handleUpload(item)
-        }
-      >
-        {/* DOCUMENT ICON */}
-
-        <View
-          style={[styles.documentIcon, { backgroundColor: item.background }]}
-        >
-          <Ionicons name={item.icon} size={31} color={item.iconColor} />
-        </View>
-
-        {/* DOCUMENT INFORMATION */}
-
-        <View style={styles.documentContent}>
-          <Text style={styles.documentTitle}>{item.title}</Text>
-
-          <Text style={styles.documentDescription}>
-            {item.fileName || item.description}
-          </Text>
-        </View>
-
-        {/* STATUS / UPLOAD */}
-
-        <View style={styles.documentAction}>
-          {isUploading ? (
-            <View style={styles.uploadBadge}>
-              <Text style={styles.uploadText}>Please wait</Text>
-            </View>
-          ) : item.status === "Verified" ? (
-            <StatusBadge status="Verified" />
-          ) : item.status === "Under Review" ? (
-            <StatusBadge status="Under Review" />
-          ) : item.status === "Rejected" ? (
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={() => handleUpload(item)}
-            >
-              <Ionicons name="refresh-outline" size={17} color={Colors.white} />
-              <Text style={styles.uploadText}>Retry</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={() => handleUpload(item)}
-            >
-              <Ionicons
-                name="cloud-upload-outline"
-                size={18}
-                color={Colors.white}
-              />
-              <Text style={styles.uploadText}>Upload</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Ionicons name="chevron-forward" size={23} color={Colors.white} />
-      </TouchableOpacity>
-    );
-  };
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.background}
+      />
 
       <LinearGradient
         colors={Colors.gradients.background}
         style={styles.background}
       >
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={
+            Platform.OS === "ios" ? "padding" : undefined
+          }
+        >
           {/* HEADER */}
 
           <View style={styles.header}>
@@ -355,134 +538,214 @@ export default function DocumentsScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Ionicons name="chevron-back" size={28} color={Colors.white} />
+              <Ionicons
+                name="chevron-back"
+                size={28}
+                color={Colors.white}
+              />
             </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>My Documents</Text>
+            <Text style={styles.headerTitle}>
+              My Documents
+            </Text>
 
             <View style={styles.headerRight} />
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            {/* HERO SECTION */}
+            {/* HERO */}
 
             <View style={styles.heroSection}>
-              <LinearGradient
-                colors={["#450909", "#180303", "#050505"]}
-                style={styles.heroCircle}
-              >
-                <Ionicons name="clipboard" size={105} color={Colors.white} />
-
-                <View style={styles.heroCheck}>
-                  <Ionicons
-                    name="shield-checkmark"
-                    size={34}
-                    color={Colors.white}
-                  />
-                </View>
-              </LinearGradient>
-
-              <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>
-                  Upload & Manage Your Documents
-                </Text>
-
-                <Text style={styles.heroDescription}>
-                  Keep your documents updated and verified to continue
-                  delivering.
-                </Text>
+              <View style={styles.heroIcon}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={55}
+                  color={Colors.white}
+                />
               </View>
+
+              <Text style={styles.heroTitle}>
+                Upload Your Documents
+              </Text>
+
+              <Text style={styles.heroDescription}>
+                Add your Aadhaar and PAN details with clear
+                document images for verification.
+              </Text>
             </View>
 
-            {/* VERIFICATION PROGRESS */}
+            {/* PROGRESS */}
 
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressTitle}>Document Verification</Text>
+                <Text style={styles.progressTitle}>
+                  Document Upload Progress
+                </Text>
 
                 <Text style={styles.progressCount}>
-                  {verifiedCount} of {totalDocuments} Verified
+                  {selectedCount}/{totalCount}
                 </Text>
               </View>
 
-              <View style={styles.progressRow}>
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${progressPercentage}%` },
-                    ]}
-                  />
-                </View>
-
-                <Text style={styles.progressPercentage}>
-                  {progressPercentage}%
-                </Text>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${progress}%` },
+                  ]}
+                />
               </View>
+
+              <Text style={styles.progressPercentage}>
+                {progress}% completed
+              </Text>
             </View>
 
-            {/* DOCUMENT LIST */}
+            {/* AADHAAR DETAILS */}
 
-            <View style={styles.documentContainer}>
-              {documents.map((item) => (
-                <DocumentCard key={item.id} item={item} />
-              ))}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Aadhaar Details
+              </Text>
+
+              <Text style={styles.inputLabel}>
+                Aadhaar Number
+              </Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Enter 12-digit Aadhaar number"
+                placeholderTextColor={Colors.textMuted}
+                value={aadharNumber}
+                onChangeText={(value) =>
+                  setAadharNumber(
+                    value.replace(/\D/g, "").slice(0, 12)
+                  )
+                }
+                keyboardType="number-pad"
+                maxLength={12}
+              />
+
+              <Text style={styles.inputHint}>
+                {aadharNumber.length}/12 digits
+              </Text>
             </View>
 
-            {/* IMPORTANT INFORMATION */}
+            {/* AADHAAR IMAGES */}
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Aadhaar Images
+              </Text>
+
+              {renderImageCard(IMAGE_FIELDS[0])}
+              {renderImageCard(IMAGE_FIELDS[1])}
+            </View>
+
+            {/* PAN DETAILS */}
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                PAN Details
+              </Text>
+
+              <Text style={styles.inputLabel}>
+                PAN Number
+              </Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Example: ABCDE1234F"
+                placeholderTextColor={Colors.textMuted}
+                value={panNumber}
+                onChangeText={(value) =>
+                  setPanNumber(
+                    value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 10)
+                  )
+                }
+                autoCapitalize="characters"
+                maxLength={10}
+              />
+
+              {renderImageCard(IMAGE_FIELDS[2])}
+            </View>
+
+            {/* INFORMATION */}
 
             <View style={styles.importantCard}>
               <View style={styles.importantHeader}>
-                <View style={styles.importantIcon}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={32}
-                    color={Colors.white}
-                  />
-                </View>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={25}
+                  color={Colors.primary}
+                />
 
-                <Text style={styles.importantTitle}>Important</Text>
+                <Text style={styles.importantTitle}>
+                  Important Information
+                </Text>
               </View>
 
-              <View style={styles.importantList}>
-                <View style={styles.importantRow}>
-                  <View style={styles.redDot} />
+              <Text style={styles.importantText}>
+                • Upload clear and readable images.
+              </Text>
 
-                  <Text style={styles.importantText}>
-                    Upload clear, original and valid documents.
-                  </Text>
-                </View>
+              <Text style={styles.importantText}>
+                • Accepted formats: JPG, JPEG, PNG and WEBP.
+              </Text>
 
-                <View style={styles.importantRow}>
-                  <View style={styles.redDot} />
-
-                  <Text style={styles.importantText}>
-                    Ensure the details match your registered information.
-                  </Text>
-                </View>
-
-                <View style={styles.importantRow}>
-                  <View style={styles.redDot} />
-
-                  <Text style={styles.importantText}>
-                    Keep your documents updated at all times.
-                  </Text>
-                </View>
-              </View>
+              <Text style={styles.importantText}>
+                • Make sure your document details are correct.
+              </Text>
             </View>
 
-            {/* FOOTER */}
+            {/* SUBMIT BUTTON */}
 
-            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                submitting && styles.disabledButton,
+              ]}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.85}
+            >
+              {submitting ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={21}
+                    color={Colors.white}
+                  />
+
+                  <Text style={styles.submitButtonText}>
+                    Submit Documents
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.footerText}>
+              BAKASURAN DELIVERY PARTNER
+            </Text>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </LinearGradient>
     </SafeAreaView>
   );
 }
+
+// =====================================================
+// STYLES
+// =====================================================
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -502,8 +765,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 35,
   },
-
-  // HEADER
 
   header: {
     height: 60,
@@ -528,48 +789,26 @@ const styles = StyleSheet.create({
     width: 40,
   },
 
-  // HERO
-
   heroSection: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 15,
-    marginBottom: 20,
+    paddingVertical: 22,
   },
 
-  heroCircle: {
-    width: "43%",
-    height: 180,
-    borderRadius: 90,
+  heroIcon: {
+    width: 105,
+    height: 105,
+    borderRadius: 55,
+    backgroundColor: "#650B12",
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
-  },
-
-  heroCheck: {
-    position: "absolute",
-    bottom: 12,
-    right: 8,
-    width: 53,
-    height: 53,
-    borderRadius: 27,
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: Colors.background,
-  },
-
-  heroContent: {
-    flex: 1,
+    marginBottom: 15,
   },
 
   heroTitle: {
     color: Colors.white,
-    fontSize: 21,
+    fontSize: 22,
     fontFamily: Fonts.extraBold,
-    lineHeight: 28,
+    textAlign: "center",
   },
 
   heroDescription: {
@@ -577,10 +816,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     lineHeight: 21,
-    marginTop: 9,
+    textAlign: "center",
+    marginTop: 8,
   },
-
-  // PROGRESS CARD
 
   progressCard: {
     backgroundColor: "#190909",
@@ -588,38 +826,29 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     borderRadius: 17,
     padding: 16,
-    marginBottom: 23,
+    marginBottom: 22,
   },
 
   progressHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 12,
   },
 
   progressTitle: {
     color: Colors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: Fonts.bold,
   },
 
   progressCount: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    fontFamily: Fonts.medium,
-  },
-
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    color: Colors.white,
+    fontSize: 14,
+    fontFamily: Fonts.bold,
   },
 
   progressTrack: {
-    flex: 1,
-    height: 12,
+    height: 10,
     backgroundColor: "#454545",
     borderRadius: 10,
     overflow: "hidden",
@@ -632,167 +861,202 @@ const styles = StyleSheet.create({
   },
 
   progressPercentage: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    marginTop: 8,
+    textAlign: "right",
+  },
+
+  section: {
+    marginBottom: 22,
+  },
+
+  sectionTitle: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 18,
     fontFamily: Fonts.bold,
+    marginBottom: 14,
   },
 
-  // DOCUMENT CARDS
-
-  documentContainer: {
-    gap: 12,
+  inputLabel: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontFamily: Fonts.medium,
+    marginBottom: 8,
   },
 
-  documentCard: {
-    minHeight: 98,
+  input: {
+    height: 52,
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    color: Colors.white,
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+  },
+
+  inputHint: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    textAlign: "right",
+    marginTop: 5,
+  },
+
+  documentCard: {
+    backgroundColor: Colors.backgroundLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 15,
+    padding: 14,
+    marginBottom: 12,
+  },
+
+  documentCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    marginBottom: 13,
   },
 
   documentIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 15,
-    justifyContent: "center",
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#650B12",
     alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
 
-  documentContent: {
+  documentInfo: {
     flex: 1,
-    justifyContent: "center",
   },
 
   documentTitle: {
     color: Colors.white,
     fontSize: 14,
     fontFamily: Fonts.bold,
-    marginBottom: 5,
   },
 
   documentDescription: {
     color: Colors.textSecondary,
     fontSize: 11,
     fontFamily: Fonts.regular,
-    lineHeight: 17,
+    marginTop: 4,
   },
-
-  documentAction: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // STATUS BADGE
-
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderRadius: 25,
-  },
-
-  statusText: {
-    color: Colors.white,
-    fontSize: 10,
-    fontFamily: Fonts.bold,
-  },
-
-  // UPLOAD BUTTON
 
   uploadButton: {
+    minHeight: 43,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 25,
+    gap: 8,
   },
 
-  uploadText: {
+  uploadButtonText: {
     color: Colors.white,
-    fontSize: 10,
+    fontSize: 13,
     fontFamily: Fonts.bold,
   },
 
-  uploadBadge: {
-    backgroundColor: Colors.warning,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 20,
+  selectedFileBox: {
+    backgroundColor: "#102B1B",
+    borderRadius: 10,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
 
-  // IMPORTANT CARD
+  selectedFileInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+
+  fileName: {
+    flex: 1,
+    color: Colors.white,
+    fontSize: 11,
+    fontFamily: Fonts.medium,
+  },
+
+  fileActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  changeButton: {
+    padding: 5,
+  },
+
+  changeButtonText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+  },
+
+  removeButton: {
+    padding: 5,
+  },
 
   importantCard: {
     borderWidth: 1,
     borderColor: Colors.primary,
-    borderRadius: 17,
+    borderRadius: 15,
     backgroundColor: "#190909",
-    padding: 16,
-    marginTop: 28,
+    padding: 15,
+    marginBottom: 22,
   },
 
   importantHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 13,
-    marginBottom: 13,
-  },
-
-  importantIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 13,
-    backgroundColor: Colors.primaryDark,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: 9,
+    marginBottom: 12,
   },
 
   importantTitle: {
     color: Colors.white,
-    fontSize: 20,
+    fontSize: 15,
     fontFamily: Fonts.bold,
   },
 
-  importantList: {
-    gap: 10,
-  },
-
-  importantRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-
-  redDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginTop: 7,
-  },
-
   importantText: {
-    flex: 1,
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: Fonts.regular,
-    lineHeight: 21,
+    lineHeight: 22,
   },
 
-  // FOOTER
+  submitButton: {
+    height: 54,
+    backgroundColor: Colors.primary,
+    borderRadius: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
+  disabledButton: {
+    opacity: 0.6,
+  },
+
+  submitButtonText: {
+    color: Colors.white,
+    fontSize: 15,
+    fontFamily: Fonts.bold,
+  },
 
   footerText: {
     color: Colors.textMuted,

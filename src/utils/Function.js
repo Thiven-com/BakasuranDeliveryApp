@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getMethod, postMethod } from "./APIServices";
-
 export const TOKEN_KEY = "bakasuran_token";
 
 // SAVE TOKEN
@@ -70,4 +69,123 @@ export const acceptOrder = async (orderId) => {
 };
 export const getOrderDetails = async (orderId) => {
   return await getMethod(`/api/delivery/orders/${orderId}/details`);
+};
+
+
+// GET DELIVERY PARTNER PROFILE API
+export const getDeliveryProfile = async () => {
+  try {
+    const response = await getMethod("api/delivery/profile");
+
+    console.log(
+      "DELIVERY PROFILE API RESPONSE:",
+      JSON.stringify(response, null, 2)
+    );
+
+    return response;
+  } catch (error) {
+    console.log(
+      "DELIVERY PROFILE API ERROR:",
+      error.response?.data || error.message
+    );
+
+    return {
+      success: 0,
+      message:
+        error.response?.data?.message ||
+        error.message ||
+        "Unable to fetch profile details",
+    };
+  }
+};
+
+export const updateBankDetails = async (payload) => {
+  try {
+    const response = await postMethod(
+      "api/delivery/bank-details/update",
+      payload
+    );
+
+    return response;
+  } catch (error) {
+    console.log(
+      "UPDATE BANK DETAILS ERROR:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
+
+export const uploadDeliveryDocument = async (file, documentType) => {
+  try {
+    const formData = new FormData();
+
+    formData.append("file", {
+      uri: file.uri,
+      name: file.name || "document.pdf",
+      type: file.mimeType || "application/pdf",
+    });
+
+    formData.append("document_type", documentType);
+
+    const response = await postMethod(
+      "api/delivery/documents/upload",
+      formData
+    );
+
+    return response;
+  } catch (error) {
+    console.log(
+      "DOCUMENT UPLOAD ERROR:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
+
+// UPDATE VEHICLE DETAILS
+// POST: api/delivery/vehicle-details/update
+
+export const updateVehicleDetails = async (payload) => {
+  try {
+    console.log("========== UPDATE VEHICLE DETAILS ==========");
+    console.log("REQUEST:", JSON.stringify(payload, null, 2));
+
+    const response = await postMethod(
+      "api/delivery/vehicle-details/update",
+      payload
+    );
+
+    console.log("VEHICLE DETAILS RESPONSE:", JSON.stringify(response, null, 2));
+    console.log("============================================");
+
+    return response;
+  } catch (error) {
+    console.log("UPDATE VEHICLE DETAILS ERROR:", error);
+
+    return {
+      status: false,
+      message:
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to update vehicle details.",
+    };
+  }
+};
+
+export const logout = async () => {
+  console.log("========== DELIVERY LOGOUT START ==========");
+
+  const response = await postMethod("/api/delivery/logout", {});
+
+  console.log(
+    "DELIVERY LOGOUT RESPONSE:",
+    JSON.stringify(response, null, 2)
+  );
+
+  if (response?.status !== true && response?.status !== 1) {
+    throw new Error(response?.message || "Logout failed.");
+  }
+
+  return response;
 };
