@@ -65,7 +65,7 @@ export default function OrdersScreen() {
 
       if (response?.status === true) {
         router.push({
-          pathname: "/OrderDetails",
+          pathname: "/OrderMapScreen",
           params: { orderId: String(orderId) },
         });
       } else {

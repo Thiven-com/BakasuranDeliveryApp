@@ -5,9 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -17,133 +15,118 @@ import {
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import BASE_URL from "../constants/AppUrls";
 import { getOrderDetails } from "../utils/Function";
 
-// COLORS
 const COLORS = {
   background: "#0A0A0A",
   card: "#161616",
-  cardBorder: "#262626",
-  surface: "#1F1F1F",
+  border: "#292929",
   red: "#F9080C",
-  redSoft: "rgba(249, 8, 12, 0.14)",
   white: "#FFFFFF",
-  gray: "#9A9A9A",
-  lightGray: "#D0D0D0",
-  green: "#20D34A",
-  greenSoft: "rgba(32, 211, 74, 0.14)",
+  gray: "#999999",
   gold: "#F5B51B",
-  goldSoft: "rgba(245, 181, 27, 0.14)",
+  green: "#20D34A",
 };
 
-// PRODUCT IMAGE URL
-const getProductImageUrl = (imagePath) => {
-  if (!imagePath) return null;
+export default function OrderMapScreen() {
+  const { orderId: rawOrderId, id: fallbackId } = useLocalSearchParams();
 
-  const baseUrl = BASE_URL.replace(/\/$/, "");
-  const image = imagePath.replace(/^\//, "");
-
-  return `${baseUrl}/${image}`;
-};
-
-// NORMALIZE API RESPONSE
-const normalizeOrder = (data = {}) => {
-  const orderDetails = data.order_details || {};
-  const restaurant = data.restaurant_details || {};
-  const customer = data.customer_details || {};
-  const address = data.customer_address || {};
-
-  const products = Array.isArray(data.products) ? data.products : [];
-
-  const fullAddress = [
-    address.address,
-    address.address_2,
-    address.landmark,
-    address.city,
-    address.state,
-    address.pincode,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  return {
-    id: orderDetails.order_id,
-
-    bookingNumber: orderDetails.booking_number || "",
-
-    status: orderDetails.order_status || "",
-
-    paymentStatus: orderDetails.payment_status || "",
-
-    amount: orderDetails.grand_total ?? null,
-
-    restaurantName: restaurant.restaurant_name || "Restaurant",
-
-    restaurantAddress: restaurant.address || "Address unavailable",
-
-    restaurantPhone: restaurant.mobile || restaurant.phone || "",
-
-    customerName: address.name || customer.customer_name || "Customer",
-
-    customerAddress: fullAddress || "Address unavailable",
-
-    customerPhone: address.mobile || address.phone || customer.mobile || "",
-
-    items: products.map((item) => ({
-      id: item.order_item_id,
-      productId: item.product_id,
-
-      name: item.product_name || `Product #${item.product_id}`,
-
-      image: item.product_image,
-
-      quantity: item.quantity ?? 1,
-
-      price: item.price,
-
-      total: item.total,
-    })),
-  };
-};
-
-// MAIN SCREEN
-export default function OrderDetailsScreen() {
-  const { orderId: rawOrderId } = useLocalSearchParams();
-
-  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+  // Accept either parameter while supporting the corrected orderId route.
+  const orderId = Array.isArray(rawOrderId)
+    ? rawOrderId[0]
+    : rawOrderId || (Array.isArray(fallbackId) ? fallbackId[0] : fallbackId);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  console.log("Received Order ID:", orderId);
-
   // LOAD ORDER DETAILS
   const loadOrderDetails = useCallback(async () => {
+    console.log("================================");
+    console.log("Received Order ID:", orderId);
+    console.log("================================");
+
     if (!orderId) {
-      setError("Order id is missing");
+      setError("Order ID is missing. Please check navigation.");
       setLoading(false);
+      console.log("ERROR: Order ID is missing");
       return;
     }
 
     try {
       setLoading(true);
       setError("");
+      setOrder(null);
 
       const response = await getOrderDetails(orderId);
 
-      console.log("Order Details Response:", response);
+      // IMPORTANT DEBUG LOGS
+      console.log("Order ID:", orderId);
+      console.log(
+        "Order Details API Response:",
+        JSON.stringify(response, null, 2),
+      );
 
-      if (response?.status === true) {
-        setOrder(normalizeOrder(response.data));
-      } else {
-        setError(response?.message || "Failed to load order details");
+      if (response?.status !== true || !response?.data) {
+        const message = response?.message || "Unable to fetch order details";
+
+        console.log("API FAILED:", message);
+        setError(message);
+        return;
       }
+
+      const data = response.data;
+
+      const orderDetails = data.order_details || {};
+      const restaurant = data.restaurant_details || {};
+      const customer = data.customer_details || {};
+      const address = data.customer_address || {};
+
+      const customerAddress = [
+        address.address,
+        address.address_2,
+        address.landmark,
+        address.city,
+        address.state,
+        address.pincode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const formattedOrder = {
+        bookingNumber:
+          orderDetails.booking_number || orderDetails.order_id || orderId,
+
+        status: orderDetails.order_status || "Unavailable",
+
+        restaurantName: restaurant.restaurant_name || "Restaurant",
+
+        restaurantAddress: restaurant.address || "",
+
+        restaurantLatitude: restaurant.latitude ?? null,
+        restaurantLongitude: restaurant.longitude ?? null,
+
+        customerName: address.name || customer.customer_name || "Customer",
+
+        customerAddress,
+
+        customerLatitude: address.latitude ?? null,
+        customerLongitude: address.longitude ?? null,
+      };
+
+      console.log(
+        "Formatted Order Details:",
+        JSON.stringify(formattedOrder, null, 2),
+      );
+
+      setOrder(formattedOrder);
     } catch (err) {
       console.log("Order Details Error:", err);
-      setError("Something went wrong. Please try again.");
+      console.log("Error Message:", err?.message);
+
+      setError(
+        err?.message || "Something went wrong while loading order details.",
+      );
     } finally {
       setLoading(false);
     }
@@ -153,326 +136,229 @@ export default function OrderDetailsScreen() {
     loadOrderDetails();
   }, [loadOrderDetails]);
 
-  // CALL RESTAURANT / CUSTOMER
-  const handleCall = (label, phone) => {
-    if (!phone) {
-      Alert.alert(`Call ${label}`, "Phone number is not available.");
+  // OPEN GOOGLE MAPS
+  const openGoogleMaps = async (latitude, longitude, address, label) => {
+    let destination = "";
+
+    const hasCoordinates =
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined &&
+      String(latitude).trim() !== "" &&
+      String(longitude).trim() !== "" &&
+      Number.isFinite(Number(latitude)) &&
+      Number.isFinite(Number(longitude));
+
+    if (hasCoordinates) {
+      destination = `${latitude},${longitude}`;
+    } else if (address && address.trim()) {
+      destination = address.trim();
+    } else {
+      Alert.alert(
+        "Location unavailable",
+        `${label} address and coordinates are not available from the API.`,
+      );
       return;
     }
 
-    Linking.openURL(`tel:${phone}`).catch(() => {
-      Alert.alert("Error", "Unable to open the phone dialer.");
-    });
+    const url =
+      "https://www.google.com/maps/dir/?api=1" +
+      `&destination=${encodeURIComponent(destination)}` +
+      "&travelmode=driving";
+
+    console.log("Opening Google Maps:", url);
+
+    try {
+      await Linking.openURL(url);
+    } catch (err) {
+      console.log("Google Maps Error:", err);
+      Alert.alert("Error", "Unable to open Google Maps.");
+    }
   };
 
-  // PICKUP BUTTON
-  const handlePickup = () => {
-    router.push({
-      pathname: "/ConfirmPickupScreen",
-      params: {
-        id: String(orderId),
-      },
-    });
-  };
-
-  const totalQty = order?.items.reduce(
-    (sum, item) => sum + Number(item.quantity || 0),
-    0,
-  );
-
-  // LOADING SCREEN
+  // LOADING
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar
-          barStyle="light-content"
-          backgroundColor={COLORS.background}
-        />
+        <StatusBar barStyle="light-content" />
 
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={22} color={COLORS.white} />
-          </TouchableOpacity>
+        <Header />
 
-          <Text style={styles.headerTitle}>Order Details</Text>
-
-          <View style={styles.headerRight} />
-        </View>
-
-        <View style={styles.centerBox}>
+        <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.red} />
-          <Text style={styles.stateText}>Loading order details...</Text>
+          <Text style={styles.stateText}>Loading order locations...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ERROR SCREEN
-  if (error) {
+  // ERROR
+  if (error || !order) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar
-          barStyle="light-content"
-          backgroundColor={COLORS.background}
-        />
+        <StatusBar barStyle="light-content" />
 
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={22} color={COLORS.white} />
-          </TouchableOpacity>
+        <Header />
 
-          <Text style={styles.headerTitle}>Order Details</Text>
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.red} />
 
-          <View style={styles.headerRight} />
-        </View>
+          <Text style={styles.errorTitle}>Order details unavailable</Text>
 
-        <View style={styles.centerBox}>
-          <View style={styles.errorIcon}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={34}
-              color={COLORS.red}
-            />
-          </View>
-
-          <Text style={styles.errorTitle}>Couldn't load order</Text>
-
-          <Text style={styles.stateText}>{error}</Text>
+          <Text style={styles.stateText}>
+            {error || "No order information found."}
+          </Text>
 
           <TouchableOpacity
             style={styles.retryButton}
             onPress={loadOrderDetails}
           >
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.buttonText}>Try Again</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButtonText}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // MAIN UI
+  // MAIN SCREEN
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={22} color={COLORS.white} />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Order Details</Text>
-
-        <View style={styles.headerRight} />
-      </View>
+      <Header />
 
       <ScrollView
-        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.content}
       >
-        {/* ORDER SUMMARY */}
-        <View style={styles.card}>
-          <View style={styles.summaryTop}>
-            <View>
-              <Text style={styles.label}>ORDER ID</Text>
-
-              <Text style={styles.orderId}>
-                #{order?.bookingNumber || order?.id}
-              </Text>
-            </View>
-
-            {!!order?.status && (
-              <View style={styles.statusBadge}>
-                <View style={styles.badgeDot} />
-
-                <Text style={styles.statusText}>
-                  {String(order.status).toUpperCase()}
-                </Text>
-              </View>
-            )}
+        {/* ORDER INFORMATION */}
+        <View style={styles.orderCard}>
+          <View style={styles.orderIcon}>
+            <Ionicons name="receipt-outline" size={25} color={COLORS.red} />
           </View>
 
-          <View style={styles.amountBox}>
-            <View>
-              <Text style={styles.amountLabel}>
-                {order?.items.length} Items
-                {totalQty ? ` • Qty ${totalQty}` : ""}
-              </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.smallLabel}>ORDER NUMBER</Text>
 
-              {!!order?.paymentStatus && (
-                <Text style={styles.paymentStatus}>
-                  Payment: {order.paymentStatus.toUpperCase()}
-                </Text>
-              )}
-            </View>
+            <Text style={styles.orderNumber}>#{order.bookingNumber}</Text>
 
-            <Text style={styles.amount}>
-              {order?.amount != null
-                ? `₹${Number(order.amount).toFixed(2)}`
-                : "--"}
-            </Text>
+            <Text style={styles.orderStatus}>Status: {order.status}</Text>
           </View>
         </View>
 
-        {/* RESTAURANT AND CUSTOMER DETAILS */}
-        <View style={styles.card}>
-          {/* RESTAURANT */}
-          <View style={styles.stopRow}>
-            <View style={styles.timeline}>
-              <View style={[styles.stopIcon, styles.pickupIcon]}>
-                <Ionicons name="restaurant" size={17} color={COLORS.gold} />
-              </View>
+        <Text style={styles.sectionTitle}>Delivery Locations</Text>
 
-              <View style={styles.timelineLine} />
+        {/* RESTAURANT */}
+        <View style={styles.locationCard}>
+          <View style={styles.locationHeader}>
+            <View style={styles.restaurantIcon}>
+              <Ionicons name="restaurant" size={22} color={COLORS.gold} />
             </View>
 
-            <View style={styles.stopBody}>
-              <Text style={[styles.stopTag, { color: COLORS.gold }]}>
-                PICKUP FROM
-              </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.locationType}>PICKUP LOCATION</Text>
 
-              <Text style={styles.stopName}>{order?.restaurantName}</Text>
-
-              <Text style={styles.stopAddress}>{order?.restaurantAddress}</Text>
+              <Text style={styles.locationName}>{order.restaurantName}</Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCall("Restaurant", order?.restaurantPhone)}
-            >
-              <Ionicons name="call" size={18} color={COLORS.white} />
-            </TouchableOpacity>
           </View>
 
-          {/* CUSTOMER */}
-          <View style={[styles.stopRow, { marginTop: 4 }]}>
-            <View style={styles.timeline}>
-              <View style={[styles.stopIcon, styles.dropIcon]}>
-                <Ionicons name="location" size={17} color={COLORS.green} />
-              </View>
-            </View>
+          <Text style={styles.address}>
+            {order.restaurantAddress || "Address unavailable"}
+          </Text>
 
-            <View style={styles.stopBody}>
-              <Text style={[styles.stopTag, { color: COLORS.green }]}>
-                DELIVER TO
-              </Text>
+          <TouchableOpacity
+            style={styles.restaurantButton}
+            activeOpacity={0.85}
+            onPress={() =>
+              openGoogleMaps(
+                order.restaurantLatitude,
+                order.restaurantLongitude,
+                order.restaurantAddress,
+                "Restaurant",
+              )
+            }
+          >
+            <Ionicons name="navigate" size={20} color={COLORS.white} />
 
-              <Text style={styles.stopName}>{order?.customerName}</Text>
-
-              <Text style={styles.stopAddress}>{order?.customerAddress}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCall("Customer", order?.customerPhone)}
-            >
-              <Ionicons name="call" size={18} color={COLORS.white} />
-            </TouchableOpacity>
-          </View>
+            <Text style={styles.buttonText}>Navigate to Restaurant</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* PRODUCT ITEMS */}
-        <View style={styles.card}>
-          <View style={styles.itemsHeader}>
-            <Text style={styles.sectionTitle}>Items</Text>
+        {/* CUSTOMER */}
+        <View style={styles.locationCard}>
+          <View style={styles.locationHeader}>
+            <View style={styles.customerIcon}>
+              <Ionicons name="location" size={22} color={COLORS.green} />
+            </View>
 
-            <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{order?.items.length}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.customerLocationType}>DELIVERY LOCATION</Text>
+
+              <Text style={styles.locationName}>{order.customerName}</Text>
             </View>
           </View>
 
-          {order?.items.length === 0 && (
-            <Text style={styles.stateText}>No items found.</Text>
-          )}
+          <Text style={styles.address}>
+            {order.customerAddress || "Address unavailable"}
+          </Text>
 
-          {order?.items.map((item, index) => {
-            const imageUrl = getProductImageUrl(item.image);
+          <TouchableOpacity
+            style={styles.customerButton}
+            activeOpacity={0.85}
+            onPress={() =>
+              openGoogleMaps(
+                order.customerLatitude,
+                order.customerLongitude,
+                order.customerAddress,
+                "Customer",
+              )
+            }
+          >
+            <Ionicons name="navigate" size={20} color={COLORS.white} />
 
-            const displayPrice =
-              item.total != null && Number(item.total) > 0
-                ? Number(item.total)
-                : item.price != null
-                  ? Number(item.price) * Number(item.quantity)
-                  : null;
+            <Text style={styles.buttonText}>Navigate to Customer</Text>
+          </TouchableOpacity>
+        </View>
 
-            return (
-              <View
-                key={item.id || index}
-                style={[
-                  styles.productRow,
-                  index === order.items.length - 1 && styles.lastItemRow,
-                ]}
-              >
-                {/* PRODUCT IMAGE */}
-                {imageUrl ? (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    style={styles.productImage}
-                    resizeMode="cover"
-                    onError={() =>
-                      console.log("Product image failed:", imageUrl)
-                    }
-                  />
-                ) : (
-                  <View style={styles.productImagePlaceholder}>
-                    <Ionicons
-                      name="fast-food-outline"
-                      size={30}
-                      color={COLORS.gray}
-                    />
-                  </View>
-                )}
+        {/* INFORMATION */}
+        <View style={styles.infoCard}>
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={COLORS.gold}
+          />
 
-                {/* PRODUCT INFORMATION */}
-                <View style={styles.productInfo}>
-                  <Text style={styles.itemName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-
-                  <Text style={styles.itemQuantity}>
-                    Quantity: {item.quantity}
-                  </Text>
-
-                  <Text style={styles.productPrice}>
-                    {displayPrice != null
-                      ? `₹${displayPrice.toFixed(2)}`
-                      : "Price unavailable"}
-                  </Text>
-                </View>
-
-                <View style={styles.qtyPill}>
-                  <Text style={styles.itemQuantity}>x{item.quantity}</Text>
-                </View>
-              </View>
-            );
-          })}
+          <Text style={styles.infoText}>
+            Google Maps opens directions from your current location to the
+            selected destination. Accurate navigation depends on the address or
+            coordinates returned by your API.
+          </Text>
         </View>
       </ScrollView>
-
-      {/* PICKUP BUTTON */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={styles.pickupButton}
-          activeOpacity={0.85}
-          onPress={handlePickup}
-        >
-          <Ionicons name="bag-check" size={22} color={COLORS.white} />
-
-          <Text style={styles.pickupButtonText}>Pick Up Order</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
+  );
+}
+
+// HEADER COMPONENT
+function Header() {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity style={styles.headerBack} onPress={() => router.back()}>
+        <Ionicons name="chevron-back" size={23} color={COLORS.white} />
+      </TouchableOpacity>
+
+      <Text style={styles.headerTitle}>Order Navigation</Text>
+
+      <View style={{ width: 40 }} />
+    </View>
   );
 }
 
@@ -483,375 +369,226 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  // HEADER
   header: {
-    height: 64,
+    height: 62,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
   },
 
-  backButton: {
+  headerBack: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
   },
 
   headerTitle: {
     color: COLORS.white,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
-    letterSpacing: 0.3,
   },
 
-  headerRight: {
-    width: 40,
-  },
-
-  // LOADING AND ERROR
-  centerBox: {
+  center: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 30,
+    alignItems: "center",
+    paddingHorizontal: 25,
   },
 
   stateText: {
     color: COLORS.gray,
     fontSize: 14,
-    marginTop: 10,
+    marginTop: 12,
     textAlign: "center",
-  },
-
-  errorIcon: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: COLORS.redSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
+    lineHeight: 21,
   },
 
   errorTitle: {
     color: COLORS.white,
     fontSize: 18,
     fontWeight: "700",
+    marginTop: 14,
   },
 
   retryButton: {
-    marginTop: 20,
-    height: 44,
-    paddingHorizontal: 28,
-    borderRadius: 22,
     backgroundColor: COLORS.red,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 22,
   },
 
-  retryText: {
+  buttonText: {
     color: COLORS.white,
     fontSize: 15,
     fontWeight: "700",
-  },
-
-  // SCROLL
-  scrollView: {
-    flex: 1,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-
-  // CARDS
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 16,
-    marginBottom: 16,
-  },
-
-  // ORDER SUMMARY
-  summaryTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  label: {
-    color: COLORS.gray,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-
-  orderId: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: "700",
-  },
-
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.redSoft,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  badgeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.red,
-    marginRight: 6,
-  },
-
-  statusText: {
-    color: COLORS.red,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-  },
-
-  amountBox: {
-    marginTop: 16,
-    backgroundColor: COLORS.goldSoft,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  amountLabel: {
-    color: COLORS.lightGray,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
-  paymentStatus: {
-    color: COLORS.green,
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 5,
-  },
-
-  amount: {
-    color: COLORS.gold,
-    fontSize: 24,
-    fontWeight: "800",
-  },
-
-  // RESTAURANT AND CUSTOMER
-  stopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-  timeline: {
-    width: 38,
-    alignItems: "center",
-  },
-
-  stopIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  pickupIcon: {
-    backgroundColor: COLORS.goldSoft,
-  },
-
-  dropIcon: {
-    backgroundColor: COLORS.greenSoft,
-  },
-
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    minHeight: 22,
-    backgroundColor: COLORS.cardBorder,
-    marginVertical: 4,
-  },
-
-  stopBody: {
-    flex: 1,
-    marginLeft: 12,
-    paddingBottom: 12,
-  },
-
-  stopTag: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 3,
-  },
-
-  stopName: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: "600",
-  },
-
-  stopAddress: {
-    color: COLORS.gray,
-    fontSize: 14,
-    lineHeight: 19,
-    marginTop: 3,
-  },
-
-  callButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.red,
-    alignItems: "center",
-    justifyContent: "center",
     marginLeft: 8,
   },
 
-  // ITEMS
-  itemsHeader: {
+  backButtonText: {
+    padding: 12,
+    marginTop: 8,
+  },
+
+  backText: {
+    color: COLORS.gray,
+    fontSize: 14,
+  },
+
+  content: {
+    padding: 16,
+    paddingBottom: 35,
+  },
+
+  orderCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 25,
+  },
+
+  orderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(249,8,12,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 13,
+  },
+
+  smallLabel: {
+    color: COLORS.gray,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+
+  orderNumber: {
+    color: COLORS.white,
+    fontSize: 19,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+
+  orderStatus: {
+    color: COLORS.gray,
+    fontSize: 12,
+    marginTop: 4,
   },
 
   sectionTitle: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "700",
+    marginBottom: 14,
   },
 
-  countPill: {
-    marginLeft: 8,
-    minWidth: 24,
-    height: 24,
-    paddingHorizontal: 7,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    alignItems: "center",
-    justifyContent: "center",
+  locationCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 17,
+    marginBottom: 16,
   },
 
-  countPillText: {
-    color: COLORS.lightGray,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  productRow: {
+  locationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBorder,
   },
 
-  productImage: {
-    width: 76,
-    height: 76,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-  },
-
-  productImagePlaceholder: {
-    width: 76,
-    height: 76,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  productInfo: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: "center",
-  },
-
-  itemName: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "600",
-    paddingRight: 5,
-  },
-
-  itemQuantity: {
-    color: COLORS.lightGray,
-    fontSize: 13,
-    fontWeight: "500",
-    marginTop: 5,
-  },
-
-  productPrice: {
-    color: COLORS.gold,
-    fontSize: 15,
-    fontWeight: "700",
-    marginTop: 5,
-  },
-
-  qtyPill: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginLeft: 5,
-  },
-
-  lastItemRow: {
-    borderBottomWidth: 0,
-  },
-
-  // BOTTOM BUTTON
-  bottomContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === "web" ? 100 : 12,
-    backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.cardBorder,
-  },
-
-  pickupButton: {
-    height: 52,
-    flexDirection: "row",
-    backgroundColor: COLORS.red,
+  restaurantIcon: {
+    width: 46,
+    height: 46,
     borderRadius: 14,
+    backgroundColor: "rgba(245,181,27,0.14)",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
-    shadowColor: COLORS.red,
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    marginRight: 12,
   },
 
-  pickupButtonText: {
+  customerIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "rgba(32,211,74,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  locationType: {
+    color: COLORS.gold,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  customerLocationType: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  locationName: {
     color: COLORS.white,
     fontSize: 17,
     fontWeight: "700",
-    marginLeft: 8,
+    marginTop: 4,
+  },
+
+  address: {
+    color: COLORS.gray,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 15,
+    marginBottom: 17,
+  },
+
+  restaurantButton: {
+    height: 49,
+    borderRadius: 12,
+    backgroundColor: COLORS.red,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  customerButton: {
+    height: 49,
+    borderRadius: 12,
+    backgroundColor: COLORS.green,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "rgba(245,181,27,0.10)",
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    marginTop: 5,
+  },
+
+  infoText: {
+    flex: 1,
+    color: COLORS.gray,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });
