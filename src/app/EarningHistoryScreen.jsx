@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import {
+  getDeliveryEarnings,
   getMonthlyEarningHistory,
   getTodayEarningHistory,
   getWeeklyEarningHistory,
@@ -26,9 +27,28 @@ const COLORS = {
   green: "#19D53B",
 };
 
+const getEarningAmount = (item) => {
+  const amount = [
+    item?.amount,
+    item?.earning,
+    item?.earnings,
+    item?.earning_amount,
+    item?.delivery_earning,
+    item?.delivery_partner_earning,
+    item?.delivery_partner_amount,
+    item?.delivery_fee,
+    item?.commission,
+  ].find((value) => value !== null && value !== undefined && value !== "");
+
+  return amount !== undefined && Number.isFinite(Number(amount))
+    ? Number(amount)
+    : null;
+};
+
 export default function EarningHistoryScreen() {
   const [selectedFilter, setSelectedFilter] = useState("Today");
   const [earnings, setEarnings] = useState([]);
+  const [weeklySummary, setWeeklySummary] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const filters = ["Today", "Week", "Month"];
@@ -38,6 +58,7 @@ export default function EarningHistoryScreen() {
     try {
       setLoading(true);
       setEarnings([]);
+      setWeeklySummary(null);
 
       let response;
 
@@ -52,12 +73,42 @@ export default function EarningHistoryScreen() {
       console.log(`${filter} Earnings Response:`, response);
 
       if (response?.status === true) {
-        // Adjust this mapping after checking the actual API response.
-        const earningList = Array.isArray(response.data) ? response.data : [];
-
+        const data = response.data;
+        const earningList = [
+          data,
+          data?.data,
+          data?.history,
+          data?.items,
+          data?.earnings,
+          data?.transactions,
+        ].find(Array.isArray) || [];
         setEarnings(earningList);
+
+        if (filter === "Week") {
+          const summary =
+            data?.this_week ??
+            (data?.total_earnings != null
+              ? {
+                  start_date: data.start_date,
+                  end_date: data.end_date,
+                  earnings: data.total_earnings,
+                  orders: data.total_orders,
+                }
+              : data?.earnings != null &&
+                  Number.isFinite(Number(data.earnings))
+                ? data
+                : null);
+
+          if (summary) {
+            setWeeklySummary(summary);
+          } else {
+            const earningsResponse = await getDeliveryEarnings();
+            setWeeklySummary(earningsResponse?.data?.this_week ?? null);
+          }
+        }
       } else {
         setEarnings([]);
+        setWeeklySummary(null);
 
         Alert.alert(
           "Error",
@@ -67,6 +118,7 @@ export default function EarningHistoryScreen() {
     } catch (error) {
       console.log("Earning History Error:", error);
       setEarnings([]);
+      setWeeklySummary(null);
       Alert.alert("Error", "Unable to fetch earning history");
     } finally {
       setLoading(false);
@@ -129,45 +181,95 @@ export default function EarningHistoryScreen() {
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Loading earnings...</Text>
           </View>
-        ) : earnings.length > 0 ? (
-          earnings.map((item, index) => (
-            <View key={item.id ?? index} style={styles.earningCard}>
-              {/* Completed Icon */}
-              <View style={styles.completedIcon}>
-                <Ionicons name="checkmark" size={13} color="#FFFFFF" />
-              </View>
-
-              {/* Order Information */}
-              <View style={styles.orderDetails}>
-                <Text style={styles.orderId}>
-                  {item.booking_number
-                    ? `#${item.booking_number}`
-                    : item.order_id
-                      ? `#${item.order_id}`
-                      : `Order #${index + 1}`}
-                </Text>
-
-                <Text style={styles.deliveryTime}>
-                  Delivered • {item.time || item.created_at || "--"}
-                </Text>
-              </View>
-
-              {/* Amount */}
-              <Text style={styles.amount}>
-                {item.amount != null
-                  ? `₹${item.amount}`
-                  : item.earning != null
-                    ? `₹${item.earning}`
-                    : "₹--"}
-              </Text>
-            </View>
-          ))
         ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={35} color={COLORS.gray} />
+          <>
+            {selectedFilter === "Week" && weeklySummary && (
+              <View style={styles.weeklySummaryCard}>
+                <Text style={styles.weeklySummaryTitle}>
+                  This Week's Earnings
+                </Text>
+                <Text style={styles.weeklySummaryDates}>
+                  {weeklySummary.start_date || "--"} -{" "}
+                  {weeklySummary.end_date || "--"}
+                </Text>
+                <Text style={styles.weeklySummaryAmount}>
+                  ₹
+                  {Number(weeklySummary.earnings || 0).toLocaleString("en-IN")}
+                </Text>
+                {weeklySummary.orders != null && (
+                  <Text style={styles.weeklySummaryNote}>
+                    {weeklySummary.orders} orders
+                  </Text>
+                )}
+              </View>
+            )}
 
-            <Text style={styles.emptyText}>No earnings found</Text>
-          </View>
+            {earnings.length > 0 ? (
+              earnings.map((item, index) => {
+                const earningAmount = getEarningAmount(item);
+                const subtotal =
+                  item.subtotal != null && Number.isFinite(Number(item.subtotal))
+                    ? Number(item.subtotal)
+                    : null;
+
+                return (
+                  <View key={item.id ?? index} style={styles.earningCard}>
+                    <View style={styles.completedIcon}>
+                      <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                    </View>
+
+                    <View style={styles.orderDetails}>
+                      <Text style={styles.orderId}>
+                        {item.invoice_id
+                          ? `#${item.invoice_id}`
+                          : item.booking_number
+                            ? `#${item.booking_number}`
+                            : item.order_number
+                              ? `#${item.order_number}`
+                              : item.order_id
+                                ? `#${item.order_id}`
+                                : item.booking_id
+                                  ? `#${item.booking_id}`
+                                  : "Delivery"}
+                      </Text>
+
+                      <Text style={styles.deliveryTime}>
+                        Delivered •{" "}
+                        {item.time ||
+                          item.delivered_at ||
+                          item.completed_at ||
+                          item.delivery_date ||
+                          item.created_at ||
+                          item.date ||
+                          "--"}
+                      </Text>
+                    </View>
+
+                    {(earningAmount !== null || subtotal !== null) && (
+                      <View style={styles.amountDetails}>
+                        <Text style={styles.amountLabel}>
+                          {earningAmount !== null ? "Earning" : "Subtotal"}
+                        </Text>
+                        <Text style={styles.amount}>
+                          ₹
+                          {(earningAmount ?? subtotal).toLocaleString("en-IN")}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            ) : !(selectedFilter === "Week" && weeklySummary) ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="receipt-outline"
+                  size={35}
+                  color={COLORS.gray}
+                />
+                <Text style={styles.emptyText}>No earnings found</Text>
+              </View>
+            ) : null}
+          </>
         )}
       </ScrollView>
     </View>
@@ -265,6 +367,41 @@ const styles = StyleSheet.create({
     borderColor: "#242424",
   },
 
+  weeklySummaryCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#242424",
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 18,
+  },
+
+  weeklySummaryTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  weeklySummaryDates: {
+    color: COLORS.gray,
+    fontSize: 14,
+    marginTop: 8,
+  },
+
+  weeklySummaryAmount: {
+    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: "800",
+    marginTop: 12,
+  },
+
+  weeklySummaryNote: {
+    color: COLORS.gray,
+    fontSize: 13,
+    marginTop: 8,
+  },
+
   // Completed Icon
   completedIcon: {
     width: 20,
@@ -298,9 +435,19 @@ const styles = StyleSheet.create({
   // Amount
   amount: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    marginLeft: 5,
+  },
+
+  amountDetails: {
+    alignItems: "flex-end",
+    marginLeft: 8,
+  },
+
+  amountLabel: {
+    color: COLORS.gray,
+    fontSize: 11,
+    marginBottom: 3,
   },
 
   // Empty State

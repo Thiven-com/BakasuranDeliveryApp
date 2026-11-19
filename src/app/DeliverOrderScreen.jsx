@@ -1,6 +1,7 @@
 
-import React, { useState, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -15,7 +16,11 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+  sendDeliveryOtpForOrder,
+  verifyOrderDeliveryOtp,
+} from "../utils/Function";
 
 const COLORS = {
   background: "#050505",
@@ -26,33 +31,103 @@ const COLORS = {
 };
 
 export default function DeliverOrderScreen() {
+  const { orderId: rawOrderId, bookingNumber: rawBookingNumber } =
+    useLocalSearchParams();
+  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+  const bookingNumber = Array.isArray(rawBookingNumber)
+    ? rawBookingNumber[0]
+    : rawBookingNumber;
+
   const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
   const inputRef = useRef(null);
+  const sendAttemptedForOrder = useRef(null);
 
   const handleOtpChange = (value) => {
     setOtp(value.replace(/[^0-9]/g, "").slice(0, 4));
   };
 
-  const handleCompleteDelivery = () => {
-  Keyboard.dismiss();
+  const requestDeliveryOtp = useCallback(async () => {
+    if (!orderId) {
+      setSendError("Order ID is missing.");
+      return;
+    }
 
-  if (otp.length !== 4) {
-    Alert.alert(
-      "Enter OTP",
-      "Please enter the 4-digit delivery OTP."
-    );
-    return;
-  }
+    try {
+      setSendLoading(true);
+      setSendError("");
 
-  // Navigate to Delivery Success Screen
-  router.replace({
-    pathname: "/DeliverySuccessScreen",
-    params: {
-      orderId: "#BSK100234",
-      amount: "320",
-    },
-  });
-};
+      const response = await sendDeliveryOtpForOrder(orderId);
+      console.log("Send Delivery OTP API Response:", response);
+
+      if (response?.status === true) {
+        setOtpSent(true);
+      } else {
+        setOtpSent(false);
+        setSendError(response?.message || "Unable to send delivery OTP.");
+      }
+    } catch (error) {
+      console.log("Send Delivery OTP Error:", error);
+      setOtpSent(false);
+      setSendError(error?.message || "Unable to send delivery OTP.");
+    } finally {
+      setSendLoading(false);
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    if (sendAttemptedForOrder.current === orderId) return;
+    sendAttemptedForOrder.current = orderId;
+    requestDeliveryOtp();
+  }, [orderId, requestDeliveryOtp]);
+
+  const handleCompleteDelivery = async () => {
+    Keyboard.dismiss();
+
+    if (!orderId) {
+      Alert.alert("Error", "Order ID is missing.");
+      return;
+    }
+
+    if (!otpSent) {
+      Alert.alert("OTP Not Sent", "Send the delivery OTP before verifying it.");
+      return;
+    }
+
+    if (otp.length !== 4) {
+      Alert.alert("Enter OTP", "Please enter the 4-digit delivery OTP.");
+      return;
+    }
+
+    try {
+      setVerifyLoading(true);
+      const response = await verifyOrderDeliveryOtp(orderId, otp);
+      console.log("Verify Delivery OTP API Response:", response);
+
+      if (response?.status === true) {
+        router.replace({
+          pathname: "/DeliverySuccessScreen",
+          params: {
+            orderId: bookingNumber || String(orderId),
+            amount: "320",
+          },
+        });
+      } else {
+        Alert.alert(
+          "Delivery Failed",
+          response?.message || "Invalid delivery OTP.",
+        );
+      }
+    } catch (error) {
+      console.log("Verify Delivery OTP Error:", error);
+      Alert.alert("Error", error?.message || "Unable to verify delivery OTP.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -113,6 +188,26 @@ export default function DeliverOrderScreen() {
           enter below to complete the delivery.
         </Text>
 
+        <View style={styles.otpStatusContainer}>
+          {sendLoading ? (
+            <ActivityIndicator color={COLORS.red} />
+          ) : sendError ? (
+            <>
+              <Text style={styles.otpError}>{sendError}</Text>
+              <TouchableOpacity
+                onPress={requestDeliveryOtp}
+                disabled={sendLoading}
+              >
+                <Text style={styles.resendOtpText}>Retry OTP</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.otpSentText}>
+              OTP sent to the customer. Ask them to share it with you.
+            </Text>
+          )}
+        </View>
+
         {/* OTP Input */}
         <TouchableOpacity
           activeOpacity={1}
@@ -150,13 +245,19 @@ export default function DeliverOrderScreen() {
       {/* Bottom Button */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={styles.completeButton}
+          style={[
+            styles.completeButton,
+            (verifyLoading || sendLoading || !otpSent) && styles.disabledButton,
+          ]}
           activeOpacity={0.85}
           onPress={handleCompleteDelivery}
+          disabled={verifyLoading || sendLoading || !otpSent}
         >
-          <Text style={styles.completeButtonText}>
-            Complete Delivery
-          </Text>
+          {verifyLoading ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <Text style={styles.completeButtonText}>Complete Delivery</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -243,6 +344,33 @@ const styles = StyleSheet.create({
     marginBottom: 19,
   },
 
+  otpStatusContainer: {
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+
+  otpSentText: {
+    color: COLORS.green,
+    fontSize: 13,
+    textAlign: "center",
+  },
+
+  otpError: {
+    color: COLORS.red,
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+
+  resendOtpText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+
   // OTP Input
   otpContainer: {
     flexDirection: "row",
@@ -299,6 +427,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 4,
   },
+
+  disabledButton: {
+    opacity: 0.6,
+   },
 
   completeButtonText: {
     color: COLORS.white,

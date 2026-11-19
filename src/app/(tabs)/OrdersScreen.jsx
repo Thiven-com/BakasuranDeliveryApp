@@ -65,8 +65,11 @@ export default function OrdersScreen() {
 
       if (response?.status === true) {
         router.push({
-          pathname: "/OrderDetails",
-          params: { orderId: String(orderId) },
+          pathname: "/OrderMapScreen",
+          params: {
+            orderId: String(orderId),
+            stage: "restaurant",
+          },
         });
       } else {
         Alert.alert("Error", response?.message || "Unable to accept order");

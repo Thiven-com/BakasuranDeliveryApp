@@ -204,6 +204,20 @@ export const pickupOrder = async (orderId, pickupOtp) => {
     pickup_otp: pickupOtp,
   });
 };
+export const sendDeliveryOtpForOrder = async (orderId) => {
+  return await postMethod(
+    `/api/delivery/orders/${orderId}/send-delivery-otp`,
+    {},
+  );
+};
+export const verifyOrderDeliveryOtp = async (orderId, deliveryOtp) => {
+  return await postMethod(
+    `/api/delivery/orders/${orderId}/verify-delivery-otp`,
+    {
+      delivery_otp: deliveryOtp,
+    },
+  );
+};
 export const getDeliveryEarnings = async () => {
   return await getMethod("/api/delivery/earnings");
 };

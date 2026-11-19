@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -75,9 +74,7 @@ const DetailCard = ({
           underlineColorAndroid="transparent"
         />
       ) : (
-        <Text style={styles.detailValue}>
-          {value || "Not added"}
-        </Text>
+        <Text style={styles.detailValue}>{value || "Not added"}</Text>
       )}
     </View>
   </View>
@@ -88,10 +85,7 @@ const DetailCard = ({
 // =====================================================
 
 const SectionHeader = ({ icon, title }) => (
-  <LinearGradient
-    colors={["#260606", "#100303"]}
-    style={styles.sectionHeader}
-  >
+  <LinearGradient colors={["#260606", "#100303"]} style={styles.sectionHeader}>
     <Ionicons name={icon} size={24} color={Colors.primary} />
     <Text style={styles.sectionTitle}>{title}</Text>
   </LinearGradient>
@@ -101,14 +95,7 @@ const SectionHeader = ({ icon, title }) => (
 // DOCUMENT CARD
 // =====================================================
 
-const DocumentCard = ({
-  icon,
-  title,
-  image,
-  onPick,
-  onUpload,
-  uploading,
-}) => (
+const DocumentCard = ({ icon, title, image, onPick, onUpload, uploading }) => (
   <View style={styles.documentCard}>
     <View style={styles.documentTop}>
       <View style={styles.detailIcon}>
@@ -160,9 +147,7 @@ const DocumentCard = ({
               size={20}
               color={Colors.white}
             />
-            <Text style={styles.documentButtonText}>
-              Upload Document
-            </Text>
+            <Text style={styles.documentButtonText}>Upload Document</Text>
           </>
         )}
       </TouchableOpacity>
@@ -229,9 +214,7 @@ export default function VehicleDetailsScreen() {
         .trim()
         .toUpperCase(),
       vehicle_model: String(details.vehicleModel || "").trim(),
-      driving_license_number: String(
-        details.drivingLicenseNumber || ""
-      )
+      driving_license_number: String(details.drivingLicenseNumber || "")
         .trim()
         .toUpperCase(),
     };
@@ -244,7 +227,7 @@ export default function VehicleDetailsScreen() {
     ) {
       Alert.alert(
         "Required Fields",
-        "Please fill in all vehicle and driving licence details."
+        "Please fill in all vehicle and driving licence details.",
       );
       return;
     }
@@ -271,7 +254,7 @@ export default function VehicleDetailsScreen() {
       if (!success) {
         Alert.alert(
           "Update Failed",
-          response?.message || "Unable to update vehicle details."
+          response?.message || "Unable to update vehicle details.",
         );
         return;
       }
@@ -279,18 +262,14 @@ export default function VehicleDetailsScreen() {
       const responseData = response?.data || {};
 
       const updatedDetails = {
-        vehicleType:
-          responseData.vehicle_type ?? payload.vehicle_type,
+        vehicleType: responseData.vehicle_type ?? payload.vehicle_type,
 
-        vehicleNumber:
-          responseData.vehicle_number ?? payload.vehicle_number,
+        vehicleNumber: responseData.vehicle_number ?? payload.vehicle_number,
 
-        vehicleModel:
-          responseData.vehicle_model ?? payload.vehicle_model,
+        vehicleModel: responseData.vehicle_model ?? payload.vehicle_model,
 
         drivingLicenseNumber:
-          responseData.driving_license_number ??
-          payload.driving_license_number,
+          responseData.driving_license_number ?? payload.driving_license_number,
       };
 
       setDetails(updatedDetails);
@@ -307,7 +286,7 @@ export default function VehicleDetailsScreen() {
 
       Alert.alert(
         "Success",
-        response?.message || "Vehicle details updated successfully."
+        response?.message || "Vehicle details updated successfully.",
       );
     } catch (error) {
       console.log("VEHICLE UPDATE ERROR:", error?.response?.data || error);
@@ -316,7 +295,7 @@ export default function VehicleDetailsScreen() {
         "Error",
         error?.response?.data?.message ||
           error?.message ||
-          "Unable to update vehicle details."
+          "Unable to update vehicle details.",
       );
     } finally {
       setIsSaving(false);
@@ -336,7 +315,7 @@ export default function VehicleDetailsScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Permission Required",
-          "Please allow photo library access to select your document."
+          "Please allow photo library access to select your document.",
         );
         return;
       }
@@ -411,9 +390,7 @@ export default function VehicleDetailsScreen() {
     if (isUploading) return;
 
     const image =
-      documentType === "driving"
-        ? drivingLicenseImage
-        : vehicleRcImage;
+      documentType === "driving" ? drivingLicenseImage : vehicleRcImage;
 
     if (!image) {
       Alert.alert("Select Image", "Please select a document image first.");
@@ -428,7 +405,7 @@ export default function VehicleDetailsScreen() {
       if (!token) {
         Alert.alert(
           "Login Required",
-          "Your login session was not found. Please log in again."
+          "Your login session was not found. Please log in again.",
         );
         return;
       }
@@ -446,8 +423,7 @@ export default function VehicleDetailsScreen() {
 
       const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
 
-      const uploadUrl =
-        `${baseUrl}/api/delivery/documents/upload`;
+      const uploadUrl = `${baseUrl}/api/delivery/documents/upload`;
 
       console.log("========== DOCUMENT UPLOAD START ==========");
       console.log("UPLOAD URL:", uploadUrl);
@@ -475,14 +451,12 @@ export default function VehicleDetailsScreen() {
         result?.success === "1";
 
       if (!success) {
-        throw new Error(
-          result?.message || "Document upload was unsuccessful."
-        );
+        throw new Error(result?.message || "Document upload was unsuccessful.");
       }
 
       Alert.alert(
         "Success",
-        result?.message || "Document uploaded successfully."
+        result?.message || "Document uploaded successfully.",
       );
 
       console.log("DOCUMENT UPLOAD SUCCESS");
@@ -503,7 +477,7 @@ export default function VehicleDetailsScreen() {
         validationMessage ||
           error?.response?.data?.message ||
           error?.message ||
-          "Unable to upload document."
+          "Unable to upload document.",
       );
     } finally {
       setIsUploading(false);
@@ -517,10 +491,7 @@ export default function VehicleDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={Colors.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       <LinearGradient
         colors={Colors.gradients.background}
@@ -543,16 +514,10 @@ export default function VehicleDetailsScreen() {
                 onPress={() => router.back()}
                 disabled={isSaving || isUploading}
               >
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color={Colors.white}
-                />
+                <Ionicons name="chevron-back" size={28} color={Colors.white} />
               </TouchableOpacity>
 
-              <Text style={styles.headerTitle}>
-                Vehicle Details
-              </Text>
+              <Text style={styles.headerTitle}>Vehicle Details</Text>
 
               <TouchableOpacity
                 style={styles.editIconButton}
@@ -574,11 +539,7 @@ export default function VehicleDetailsScreen() {
                 colors={["#450909", "#180303", "#050505"]}
                 style={styles.heroCircle}
               >
-                <Ionicons
-                  name="bicycle"
-                  size={95}
-                  color={Colors.white}
-                />
+                <Ionicons name="bicycle" size={95} color={Colors.white} />
 
                 <View style={styles.heroCheck}>
                   <Ionicons
@@ -589,9 +550,7 @@ export default function VehicleDetailsScreen() {
                 </View>
               </LinearGradient>
 
-              <Text style={styles.heroTitle}>
-                Your Vehicle Information
-              </Text>
+              <Text style={styles.heroTitle}>Your Vehicle Information</Text>
 
               <Text style={styles.heroDescription}>
                 Keep your vehicle and driving licence details updated.
@@ -600,10 +559,7 @@ export default function VehicleDetailsScreen() {
 
             {/* VEHICLE INFORMATION */}
 
-            <SectionHeader
-              icon="bicycle-outline"
-              title="Vehicle Information"
-            />
+            <SectionHeader icon="bicycle-outline" title="Vehicle Information" />
 
             <View style={styles.detailsContainer}>
               <DetailCard
@@ -701,9 +657,7 @@ export default function VehicleDetailsScreen() {
                   color={Colors.primary}
                 />
 
-                <Text style={styles.infoTitle}>
-                  Important Information
-                </Text>
+                <Text style={styles.infoTitle}>Important Information</Text>
               </View>
 
               <Text style={styles.infoText}>
@@ -723,10 +677,7 @@ export default function VehicleDetailsScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[
-                styles.buttonWrapper,
-                isSaving && styles.disabledButton,
-              ]}
+              style={[styles.buttonWrapper, isSaving && styles.disabledButton]}
               onPress={isEditing ? handleSave : handleEdit}
               disabled={isSaving || isUploading}
             >
@@ -737,16 +688,11 @@ export default function VehicleDetailsScreen() {
                 style={styles.saveButton}
               >
                 {isSaving ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={Colors.white}
-                  />
+                  <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
                   <Ionicons
                     name={
-                      isEditing
-                        ? "checkmark-circle-outline"
-                        : "create-outline"
+                      isEditing ? "checkmark-circle-outline" : "create-outline"
                     }
                     size={24}
                     color={Colors.white}
@@ -773,9 +719,7 @@ export default function VehicleDetailsScreen() {
               </TouchableOpacity>
             )}
 
-            <Text style={styles.footerText}>
-              BAKASURAN DELIVERY PARTNER
-            </Text>
+            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>

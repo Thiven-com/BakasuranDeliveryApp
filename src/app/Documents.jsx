@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -96,7 +95,7 @@ export default function DocumentsScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Permission Required",
-          "Please allow gallery access to select your document."
+          "Please allow gallery access to select your document.",
         );
         return;
       }
@@ -129,11 +128,7 @@ export default function DocumentsScreen() {
 
         const imageBlob = await imageResponse.blob();
 
-        let mimeType = (
-          imageBlob.type ||
-          asset.mimeType ||
-          ""
-        ).toLowerCase();
+        let mimeType = (imageBlob.type || asset.mimeType || "").toLowerCase();
 
         if (mimeType === "image/jpg") {
           mimeType = "image/jpeg";
@@ -142,9 +137,7 @@ export default function DocumentsScreen() {
         const extension = ALLOWED_TYPES[mimeType];
 
         if (!extension) {
-          throw new Error(
-            "Please select a JPG, JPEG, PNG, or WEBP image."
-          );
+          throw new Error("Please select a JPG, JPEG, PNG, or WEBP image.");
         }
 
         if (typeof File === "undefined") {
@@ -154,14 +147,12 @@ export default function DocumentsScreen() {
         imageFile = new File(
           [imageBlob],
           `document_${Date.now()}.${extension}`,
-          { type: mimeType }
+          { type: mimeType },
         );
       } else {
         // ---------------- ANDROID / IOS ----------------
 
-        let mimeType = (
-          asset.mimeType || "image/jpeg"
-        ).toLowerCase();
+        let mimeType = (asset.mimeType || "image/jpeg").toLowerCase();
 
         if (mimeType === "image/jpg") {
           mimeType = "image/jpeg";
@@ -170,16 +161,12 @@ export default function DocumentsScreen() {
         const extension = ALLOWED_TYPES[mimeType];
 
         if (!extension) {
-          throw new Error(
-            "Please select a JPG, JPEG, PNG, or WEBP image."
-          );
+          throw new Error("Please select a JPG, JPEG, PNG, or WEBP image.");
         }
 
         imageFile = {
           uri: asset.uri,
-          name:
-            asset.fileName ||
-            `document_${Date.now()}.${extension}`,
+          name: asset.fileName || `document_${Date.now()}.${extension}`,
           type: mimeType,
         };
       }
@@ -199,7 +186,7 @@ export default function DocumentsScreen() {
 
       Alert.alert(
         "Image Selection Error",
-        error?.message || "Unable to select image."
+        error?.message || "Unable to select image.",
       );
     } finally {
       setUploadingField(null);
@@ -223,45 +210,32 @@ export default function DocumentsScreen() {
 
   const validateForm = () => {
     const cleanAadhar = String(aadharNumber || "").replace(/\D/g, "");
-    const cleanPan = String(panNumber || "").trim().toUpperCase();
+    const cleanPan = String(panNumber || "")
+      .trim()
+      .toUpperCase();
 
     if (!/^\d{12}$/.test(cleanAadhar)) {
-      Alert.alert(
-        "Invalid Aadhaar",
-        "Enter a valid 12-digit Aadhaar number."
-      );
+      Alert.alert("Invalid Aadhaar", "Enter a valid 12-digit Aadhaar number.");
       return false;
     }
 
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
-      Alert.alert(
-        "Invalid PAN",
-        "Enter a valid 10-character PAN number."
-      );
+      Alert.alert("Invalid PAN", "Enter a valid 10-character PAN number.");
       return false;
     }
 
     if (!files.aadhar_front_image) {
-      Alert.alert(
-        "Missing Image",
-        "Select Aadhaar front image."
-      );
+      Alert.alert("Missing Image", "Select Aadhaar front image.");
       return false;
     }
 
     if (!files.aadhar_back_image) {
-      Alert.alert(
-        "Missing Image",
-        "Select Aadhaar back image."
-      );
+      Alert.alert("Missing Image", "Select Aadhaar back image.");
       return false;
     }
 
     if (!files.pan_image) {
-      Alert.alert(
-        "Missing Image",
-        "Select PAN card image."
-      );
+      Alert.alert("Missing Image", "Select PAN card image.");
       return false;
     }
 
@@ -282,12 +256,9 @@ export default function DocumentsScreen() {
     }
 
     if (Platform.OS === "web") {
-      if (
-        typeof File === "undefined" ||
-        !(file instanceof File)
-      ) {
+      if (typeof File === "undefined" || !(file instanceof File)) {
         throw new Error(
-          `${fieldKey} is not a valid browser File. Please select it again.`
+          `${fieldKey} is not a valid browser File. Please select it again.`,
         );
       }
 
@@ -332,15 +303,9 @@ export default function DocumentsScreen() {
       const formData = new FormData();
 
       // Text fields
-      formData.append(
-        "aadhar_number",
-        String(aadharNumber).replace(/\D/g, "")
-      );
+      formData.append("aadhar_number", String(aadharNumber).replace(/\D/g, ""));
 
-      formData.append(
-        "pan_number",
-        String(panNumber).trim().toUpperCase()
-      );
+      formData.append("pan_number", String(panNumber).trim().toUpperCase());
 
       // Image fields
       IMAGE_FIELDS.forEach((field) => {
@@ -353,10 +318,7 @@ export default function DocumentsScreen() {
       console.log("API URL:", UPLOAD_ENDPOINT);
       console.log("CALLING POST METHOD...");
 
-      const response = await postMethod(
-        UPLOAD_ENDPOINT,
-        formData
-      );
+      const response = await postMethod(UPLOAD_ENDPOINT, formData);
 
       console.log("========== API RESPONSE ==========");
       console.log(JSON.stringify(response, null, 2));
@@ -369,14 +331,13 @@ export default function DocumentsScreen() {
       if (isSuccess) {
         Alert.alert(
           "Success",
-          response?.message ||
-            "Documents uploaded successfully.",
+          response?.message || "Documents uploaded successfully.",
           [
             {
               text: "OK",
               onPress: () => router.back(),
             },
-          ]
+          ],
         );
       } else {
         const validationErrors = response?.errors;
@@ -385,14 +346,11 @@ export default function DocumentsScreen() {
           ? Object.entries(validationErrors)
               .map(([key, messages]) => {
                 return `${key}: ${
-                  Array.isArray(messages)
-                    ? messages.join(", ")
-                    : messages
+                  Array.isArray(messages) ? messages.join(", ") : messages
                 }`;
               })
               .join("\n")
-          : response?.message ||
-            "The server did not accept the documents.";
+          : response?.message || "The server did not accept the documents.";
 
         Alert.alert("Upload Failed", errorMessage);
       }
@@ -402,8 +360,7 @@ export default function DocumentsScreen() {
 
       Alert.alert(
         "Upload Error",
-        error?.message ||
-          "Unable to upload documents."
+        error?.message || "Unable to upload documents.",
       );
     } finally {
       setSubmitting(false);
@@ -423,37 +380,22 @@ export default function DocumentsScreen() {
       <View key={field.key} style={styles.documentCard}>
         <View style={styles.documentCardHeader}>
           <View style={styles.documentIcon}>
-            <Ionicons
-              name={field.icon}
-              size={25}
-              color={Colors.primary}
-            />
+            <Ionicons name={field.icon} size={25} color={Colors.primary} />
           </View>
 
           <View style={styles.documentInfo}>
-            <Text style={styles.documentTitle}>
-              {field.title}
-            </Text>
+            <Text style={styles.documentTitle}>{field.title}</Text>
 
-            <Text style={styles.documentDescription}>
-              {field.description}
-            </Text>
+            <Text style={styles.documentDescription}>{field.description}</Text>
           </View>
         </View>
 
         {file ? (
           <View style={styles.selectedFileBox}>
             <View style={styles.selectedFileInfo}>
-              <Ionicons
-                name="image-outline"
-                size={21}
-                color={Colors.success}
-              />
+              <Ionicons name="image-outline" size={21} color={Colors.success} />
 
-              <Text
-                style={styles.fileName}
-                numberOfLines={1}
-              >
+              <Text style={styles.fileName} numberOfLines={1}>
                 {file.name}
               </Text>
             </View>
@@ -464,9 +406,7 @@ export default function DocumentsScreen() {
                 disabled={submitting}
                 style={styles.changeButton}
               >
-                <Text style={styles.changeButtonText}>
-                  Change
-                </Text>
+                <Text style={styles.changeButtonText}>Change</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -474,11 +414,7 @@ export default function DocumentsScreen() {
                 disabled={submitting}
                 style={styles.removeButton}
               >
-                <Ionicons
-                  name="trash-outline"
-                  size={19}
-                  color={Colors.error}
-                />
+                <Ionicons name="trash-outline" size={19} color={Colors.error} />
               </TouchableOpacity>
             </View>
           </View>
@@ -499,9 +435,7 @@ export default function DocumentsScreen() {
                   color={Colors.white}
                 />
 
-                <Text style={styles.uploadButtonText}>
-                  Choose Image
-                </Text>
+                <Text style={styles.uploadButtonText}>Choose Image</Text>
               </>
             )}
           </TouchableOpacity>
@@ -516,10 +450,7 @@ export default function DocumentsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={Colors.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       <LinearGradient
         colors={Colors.gradients.background}
@@ -527,9 +458,7 @@ export default function DocumentsScreen() {
       >
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={
-            Platform.OS === "ios" ? "padding" : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* HEADER */}
 
@@ -538,16 +467,10 @@ export default function DocumentsScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Ionicons
-                name="chevron-back"
-                size={28}
-                color={Colors.white}
-              />
+              <Ionicons name="chevron-back" size={28} color={Colors.white} />
             </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>
-              My Documents
-            </Text>
+            <Text style={styles.headerTitle}>My Documents</Text>
 
             <View style={styles.headerRight} />
           </View>
@@ -568,13 +491,11 @@ export default function DocumentsScreen() {
                 />
               </View>
 
-              <Text style={styles.heroTitle}>
-                Upload Your Documents
-              </Text>
+              <Text style={styles.heroTitle}>Upload Your Documents</Text>
 
               <Text style={styles.heroDescription}>
-                Add your Aadhaar and PAN details with clear
-                document images for verification.
+                Add your Aadhaar and PAN details with clear document images for
+                verification.
               </Text>
             </View>
 
@@ -593,10 +514,7 @@ export default function DocumentsScreen() {
 
               <View style={styles.progressTrack}>
                 <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${progress}%` },
-                  ]}
+                  style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
 
@@ -608,13 +526,9 @@ export default function DocumentsScreen() {
             {/* AADHAAR DETAILS */}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Aadhaar Details
-              </Text>
+              <Text style={styles.sectionTitle}>Aadhaar Details</Text>
 
-              <Text style={styles.inputLabel}>
-                Aadhaar Number
-              </Text>
+              <Text style={styles.inputLabel}>Aadhaar Number</Text>
 
               <TextInput
                 style={styles.input}
@@ -622,9 +536,7 @@ export default function DocumentsScreen() {
                 placeholderTextColor={Colors.textMuted}
                 value={aadharNumber}
                 onChangeText={(value) =>
-                  setAadharNumber(
-                    value.replace(/\D/g, "").slice(0, 12)
-                  )
+                  setAadharNumber(value.replace(/\D/g, "").slice(0, 12))
                 }
                 keyboardType="number-pad"
                 maxLength={12}
@@ -638,9 +550,7 @@ export default function DocumentsScreen() {
             {/* AADHAAR IMAGES */}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Aadhaar Images
-              </Text>
+              <Text style={styles.sectionTitle}>Aadhaar Images</Text>
 
               {renderImageCard(IMAGE_FIELDS[0])}
               {renderImageCard(IMAGE_FIELDS[1])}
@@ -649,13 +559,9 @@ export default function DocumentsScreen() {
             {/* PAN DETAILS */}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                PAN Details
-              </Text>
+              <Text style={styles.sectionTitle}>PAN Details</Text>
 
-              <Text style={styles.inputLabel}>
-                PAN Number
-              </Text>
+              <Text style={styles.inputLabel}>PAN Number</Text>
 
               <TextInput
                 style={styles.input}
@@ -667,7 +573,7 @@ export default function DocumentsScreen() {
                     value
                       .toUpperCase()
                       .replace(/[^A-Z0-9]/g, "")
-                      .slice(0, 10)
+                      .slice(0, 10),
                   )
                 }
                 autoCapitalize="characters"
@@ -687,9 +593,7 @@ export default function DocumentsScreen() {
                   color={Colors.primary}
                 />
 
-                <Text style={styles.importantTitle}>
-                  Important Information
-                </Text>
+                <Text style={styles.importantTitle}>Important Information</Text>
               </View>
 
               <Text style={styles.importantText}>
@@ -708,10 +612,7 @@ export default function DocumentsScreen() {
             {/* SUBMIT BUTTON */}
 
             <TouchableOpacity
-              style={[
-                styles.submitButton,
-                submitting && styles.disabledButton,
-              ]}
+              style={[styles.submitButton, submitting && styles.disabledButton]}
               onPress={handleSubmit}
               disabled={submitting}
               activeOpacity={0.85}
@@ -726,16 +627,12 @@ export default function DocumentsScreen() {
                     color={Colors.white}
                   />
 
-                  <Text style={styles.submitButtonText}>
-                    Submit Documents
-                  </Text>
+                  <Text style={styles.submitButtonText}>Submit Documents</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <Text style={styles.footerText}>
-              BAKASURAN DELIVERY PARTNER
-            </Text>
+            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>

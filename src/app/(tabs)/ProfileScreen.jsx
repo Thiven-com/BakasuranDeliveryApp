@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { useCallback, useRef, useState } from "react";
 
@@ -11,7 +10,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -20,7 +19,6 @@ import { router, useFocusEffect } from "expo-router";
 
 import BASE_URL from "../../constants/AppUrls";
 import { getDeliveryProfile } from "../../utils/Function";
-
 
 // =====================================================
 // COLORS
@@ -105,19 +103,14 @@ export default function ProfileScreen() {
 
       const response = await getDeliveryProfile();
 
-      console.log(
-        "PROFILE RESPONSE:",
-        JSON.stringify(response, null, 2)
-      );
+      console.log("PROFILE RESPONSE:", JSON.stringify(response, null, 2));
 
       if (
         response?.success === 0 ||
         response?.success === false ||
         response?.status === false
       ) {
-        throw new Error(
-          response?.message || "Unable to load profile."
-        );
+        throw new Error(response?.message || "Unable to load profile.");
       }
 
       const profileData = getProfileData(response);
@@ -137,9 +130,7 @@ export default function ProfileScreen() {
     } catch (err) {
       console.log("PROFILE ERROR:", err);
 
-      setError(
-        err?.message || "Something went wrong. Please try again."
-      );
+      setError(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -152,118 +143,115 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [fetchProfile])
+    }, [fetchProfile]),
   );
 
   // =====================================================
   // LOGOUT API
   // =====================================================
 
-  
-const performLogout = async () => {
-  console.log("STEP 1: LOGOUT FUNCTION STARTED");
+  const performLogout = async () => {
+    console.log("STEP 1: LOGOUT FUNCTION STARTED");
 
-  if (logoutLock.current) {
-    console.log("LOGOUT ALREADY IN PROGRESS");
-    return;
-  }
-
-  logoutLock.current = true;
-  setLoggingOut(true);
-
-  try {
-    console.log("STEP 2: READING TOKEN");
-
-    const token = await AsyncStorage.getItem("bakasuran_token");
-
-    console.log("STEP 3: TOKEN RESULT:", token ? "FOUND" : "NOT FOUND");
-
-    if (!token) {
-      throw new Error("Authentication token not found.");
+    if (logoutLock.current) {
+      console.log("LOGOUT ALREADY IN PROGRESS");
+      return;
     }
 
-    const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
-    const logoutUrl = `${baseUrl}/api/delivery/logout`;
+    logoutLock.current = true;
+    setLoggingOut(true);
 
-    console.log("STEP 4: LOGOUT URL:", logoutUrl);
-    console.log("STEP 5: SENDING API REQUEST");
+    try {
+      console.log("STEP 2: READING TOKEN");
 
-    const response = await axios({
-      method: "POST",
-      url: logoutUrl,
-      data: {},
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token.trim()}`,
-      },
-      timeout: 20000,
-    });
+      const token = await AsyncStorage.getItem("bakasuran_token");
 
-    console.log("STEP 6: SERVER RESPONDED");
-    console.log("HTTP STATUS:", response.status);
-    console.log("RESPONSE DATA:", response.data);
+      console.log("STEP 3: TOKEN RESULT:", token ? "FOUND" : "NOT FOUND");
 
-    const result = response.data;
+      if (!token) {
+        throw new Error("Authentication token not found.");
+      }
 
-    const success =
-      result?.status === true ||
-      result?.status === 1 ||
-      result?.status === "1" ||
-      result?.success === true ||
-      result?.success === 1 ||
-      result?.success === "1";
+      const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
+      const logoutUrl = `${baseUrl}/api/delivery/logout`;
 
-    if (!success) {
-      throw new Error(result?.message || "Logout was unsuccessful.");
+      console.log("STEP 4: LOGOUT URL:", logoutUrl);
+      console.log("STEP 5: SENDING API REQUEST");
+
+      const response = await axios({
+        method: "POST",
+        url: logoutUrl,
+        data: {},
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token.trim()}`,
+        },
+        timeout: 20000,
+      });
+
+      console.log("STEP 6: SERVER RESPONDED");
+      console.log("HTTP STATUS:", response.status);
+      console.log("RESPONSE DATA:", response.data);
+
+      const result = response.data;
+
+      const success =
+        result?.status === true ||
+        result?.status === 1 ||
+        result?.status === "1" ||
+        result?.success === true ||
+        result?.success === 1 ||
+        result?.success === "1";
+
+      if (!success) {
+        throw new Error(result?.message || "Logout was unsuccessful.");
+      }
+
+      console.log("STEP 7: CLEARING STORAGE");
+
+      await AsyncStorage.multiRemove([
+        "bakasuran_token",
+        "token",
+        "access_token",
+        "accessToken",
+        "authToken",
+        "user",
+        "userData",
+      ]);
+
+      setProfile(null);
+
+      console.log("STEP 8: NAVIGATING TO LOGIN");
+
+      router.replace("/LogInScreen");
+    } catch (error) {
+      console.log("========== LOGOUT ERROR ==========");
+      console.log("ERROR:", error.message);
+      console.log("ERROR CODE:", error.code);
+      console.log("HTTP STATUS:", error.response?.status);
+      console.log("SERVER RESPONSE:", error.response?.data);
+      console.log("REQUEST URL:", error.config?.url);
+
+      Alert.alert(
+        "Logout Error",
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to contact logout API.",
+      );
+    } finally {
+      logoutLock.current = false;
+      setLoggingOut(false);
+      console.log("========== LOGOUT FINISHED ==========");
     }
+  };
 
-    console.log("STEP 7: CLEARING STORAGE");
+  const handleLogout = () => {
+    console.log("LOGOUT BUTTON PRESSED");
+    console.log("CALLING LOGOUT API DIRECTLY");
 
-    await AsyncStorage.multiRemove([
-      "bakasuran_token",
-      "token",
-      "access_token",
-      "accessToken",
-      "authToken",
-      "user",
-      "userData",
-    ]);
-
-    setProfile(null);
-
-    console.log("STEP 8: NAVIGATING TO LOGIN");
-
-    router.replace("/LogInScreen");
-
-  } catch (error) {
-    console.log("========== LOGOUT ERROR ==========");
-    console.log("ERROR:", error.message);
-    console.log("ERROR CODE:", error.code);
-    console.log("HTTP STATUS:", error.response?.status);
-    console.log("SERVER RESPONSE:", error.response?.data);
-    console.log("REQUEST URL:", error.config?.url);
-
-    Alert.alert(
-      "Logout Error",
-      error.response?.data?.message ||
-        error.message ||
-        "Unable to contact logout API."
-    );
-  } finally {
-    logoutLock.current = false;
-    setLoggingOut(false);
-    console.log("========== LOGOUT FINISHED ==========");
-  }
-};
-
-
-const handleLogout = () => {
-  console.log("LOGOUT BUTTON PRESSED");
-  console.log("CALLING LOGOUT API DIRECTLY");
-
-  performLogout();
-};
+    performLogout();
+  };
 
   // =====================================================
   // PROFILE MENU
@@ -343,10 +331,7 @@ const handleLogout = () => {
     `${firstName} ${lastName}`.trim() ||
     "Delivery Partner";
 
-  const profileRole =
-    profile?.role ||
-    profile?.user_type ||
-    "Delivery Partner";
+  const profileRole = profile?.role || profile?.user_type || "Delivery Partner";
 
   const profileImage =
     profile?.profile_image ||
@@ -362,14 +347,11 @@ const handleLogout = () => {
     profile?.verification_status === "verified";
 
   const imageUrl =
-    typeof profileImage === "string" &&
-    profileImage.trim().length > 0
+    typeof profileImage === "string" && profileImage.trim().length > 0
       ? profileImage
       : null;
 
-  const imageSource = imageUrl
-    ? { uri: imageUrl }
-    : DEFAULT_IMAGE;
+  const imageSource = imageUrl ? { uri: imageUrl } : DEFAULT_IMAGE;
 
   // =====================================================
   // UI
@@ -377,10 +359,7 @@ const handleLogout = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* HEADER */}
 
@@ -391,11 +370,7 @@ const handleLogout = () => {
           onPress={() => router.back()}
           disabled={loggingOut}
         >
-          <Ionicons
-            name="chevron-back"
-            size={23}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={23} color={COLORS.white} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>My Profile</Text>
@@ -405,11 +380,7 @@ const handleLogout = () => {
           onPress={fetchProfile}
           disabled={loading || loggingOut}
         >
-          <Ionicons
-            name="refresh-outline"
-            size={21}
-            color={COLORS.white}
-          />
+          <Ionicons name="refresh-outline" size={21} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
@@ -419,14 +390,9 @@ const handleLogout = () => {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator
-              size="large"
-              color={COLORS.red}
-            />
+            <ActivityIndicator size="large" color={COLORS.red} />
 
-            <Text style={styles.loadingText}>
-              Loading profile...
-            </Text>
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
@@ -459,13 +425,9 @@ const handleLogout = () => {
                 />
               </View>
 
-              <Text style={styles.profileName}>
-                {profileName}
-              </Text>
+              <Text style={styles.profileName}>{profileName}</Text>
 
-              <Text style={styles.profileRole}>
-                {profileRole}
-              </Text>
+              <Text style={styles.profileRole}>{profileRole}</Text>
 
               <View
                 style={[
@@ -474,11 +436,7 @@ const handleLogout = () => {
                 ]}
               >
                 <Ionicons
-                  name={
-                    isVerified
-                      ? "checkmark-circle"
-                      : "time-outline"
-                  }
+                  name={isVerified ? "checkmark-circle" : "time-outline"}
                   size={15}
                   color={COLORS.white}
                 />
@@ -497,8 +455,7 @@ const handleLogout = () => {
                   key={item.id}
                   style={[
                     styles.menuItem,
-                    index === menuItems.length - 1 &&
-                      styles.lastMenuItem,
+                    index === menuItems.length - 1 && styles.lastMenuItem,
                   ]}
                   activeOpacity={0.75}
                   onPress={() => handleMenuPress(item)}
@@ -506,16 +463,10 @@ const handleLogout = () => {
                 >
                   <View style={styles.menuLeft}>
                     <View style={styles.menuIcon}>
-                      <Ionicons
-                        name={item.icon}
-                        size={20}
-                        color={COLORS.red}
-                      />
+                      <Ionicons name={item.icon} size={20} color={COLORS.red} />
                     </View>
 
-                    <Text style={styles.menuTitle}>
-                      {item.title}
-                    </Text>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
                   </View>
 
                   <Ionicons
@@ -530,19 +481,13 @@ const handleLogout = () => {
             {/* LOGOUT BUTTON */}
 
             <TouchableOpacity
-              style={[
-                styles.logoutButton,
-                loggingOut && styles.disabledButton,
-              ]}
+              style={[styles.logoutButton, loggingOut && styles.disabledButton]}
               activeOpacity={0.8}
               onPress={handleLogout}
               disabled={loggingOut}
             >
               {loggingOut ? (
-                <ActivityIndicator
-                  size="small"
-                  color={COLORS.white}
-                />
+                <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <Ionicons
                   name="log-out-outline"
@@ -558,9 +503,7 @@ const handleLogout = () => {
           </>
         )}
 
-        <Text style={styles.footerText}>
-          BAKASURAN DELIVERY PARTNER
-        </Text>
+        <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
       </ScrollView>
     </View>
   );

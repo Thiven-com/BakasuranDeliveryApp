@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -187,7 +186,7 @@ export default function PersonalDetailsScreen() {
 
       console.log(
         "PERSONAL PROFILE RESPONSE:",
-        JSON.stringify(response, null, 2)
+        JSON.stringify(response, null, 2),
       );
 
       if (
@@ -195,9 +194,7 @@ export default function PersonalDetailsScreen() {
         response?.status === 0 ||
         response?.success === 0
       ) {
-        throw new Error(
-          response?.message || "Unable to fetch profile."
-        );
+        throw new Error(response?.message || "Unable to fetch profile.");
       }
 
       const data = getProfileData(response);
@@ -209,7 +206,7 @@ export default function PersonalDetailsScreen() {
         email: String(data?.email || ""),
         dob: formatDate(data?.date_of_birth || data?.dob),
         addressLine1: String(
-          data?.address_line_1 || address?.address_line_1 || ""
+          data?.address_line_1 || address?.address_line_1 || "",
         ),
         area: String(data?.area || address?.area || ""),
         city: String(data?.city || address?.city || ""),
@@ -232,7 +229,7 @@ export default function PersonalDetailsScreen() {
 
       Alert.alert(
         "Profile Error",
-        error?.message || "Unable to load your profile."
+        error?.message || "Unable to load your profile.",
       );
     } finally {
       setLoading(false);
@@ -269,7 +266,7 @@ export default function PersonalDetailsScreen() {
         if (!permission.granted) {
           Alert.alert(
             "Permission Required",
-            "Please allow gallery access to select your profile image."
+            "Please allow gallery access to select your profile image.",
           );
           return;
         }
@@ -292,11 +289,7 @@ export default function PersonalDetailsScreen() {
         throw new Error("Selected image is not available.");
       }
 
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ];
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
       let mimeType = asset.mimeType || "image/jpeg";
 
@@ -328,17 +321,13 @@ export default function PersonalDetailsScreen() {
           throw new Error("Please select JPG, PNG, or WEBP image.");
         }
 
-        selectedFile = new File(
-          [blob],
-          `profile_${Date.now()}.${extension}`,
-          { type: mimeType }
-        );
+        selectedFile = new File([blob], `profile_${Date.now()}.${extension}`, {
+          type: mimeType,
+        });
       } else {
         selectedFile = {
           uri: asset.uri,
-          name:
-            asset.fileName ||
-            `profile_${Date.now()}.${extension}`,
+          name: asset.fileName || `profile_${Date.now()}.${extension}`,
           type: mimeType,
         };
       }
@@ -358,7 +347,7 @@ export default function PersonalDetailsScreen() {
 
       Alert.alert(
         "Image Error",
-        error?.message || "Unable to select profile image."
+        error?.message || "Unable to select profile image.",
       );
     } finally {
       setPickingImage(false);
@@ -376,29 +365,17 @@ export default function PersonalDetailsScreen() {
     }
 
     // Email is nullable in your Laravel validation.
-    if (
-      profile.email.trim() &&
-      !/^\S+@\S+\.\S+$/.test(profile.email.trim())
-    ) {
+    if (profile.email.trim() && !/^\S+@\S+\.\S+$/.test(profile.email.trim())) {
       Alert.alert("Invalid Email", "Please enter a valid email address.");
       return false;
     }
 
-    if (
-      profile.dob.trim() &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(profile.dob.trim())
-    ) {
-      Alert.alert(
-        "Invalid Date",
-        "Enter date of birth in YYYY-MM-DD format."
-      );
+    if (profile.dob.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(profile.dob.trim())) {
+      Alert.alert("Invalid Date", "Enter date of birth in YYYY-MM-DD format.");
       return false;
     }
 
-    if (
-      profile.pincode.trim() &&
-      !/^\d{6}$/.test(profile.pincode.trim())
-    ) {
+    if (profile.pincode.trim() && !/^\d{6}$/.test(profile.pincode.trim())) {
       Alert.alert("Invalid Pincode", "Enter a valid 6-digit pincode.");
       return false;
     }
@@ -414,17 +391,14 @@ export default function PersonalDetailsScreen() {
     if (!profileImage?.file) return;
 
     if (Platform.OS === "web") {
-      if (
-        typeof File === "undefined" ||
-        !(profileImage.file instanceof File)
-      ) {
+      if (typeof File === "undefined" || !(profileImage.file instanceof File)) {
         throw new Error("Selected image is not a valid browser file.");
       }
 
       formData.append(
         "profile_image",
         profileImage.file,
-        profileImage.file.name
+        profileImage.file.name,
       );
     } else {
       formData.append("profile_image", {
@@ -484,7 +458,7 @@ export default function PersonalDetailsScreen() {
                 name: value.name,
                 type: value.type,
               }
-            : value
+            : value,
         );
       }
 
@@ -509,39 +483,24 @@ export default function PersonalDetailsScreen() {
           mobile: updatedData?.mobile ?? profile.mobile,
           email: updatedData?.email ?? profile.email,
           dob: formatDate(
-            updatedData?.date_of_birth ??
-              updatedData?.dob ??
-              profile.dob
+            updatedData?.date_of_birth ?? updatedData?.dob ?? profile.dob,
           ),
           addressLine1:
             updatedData?.address_line_1 ??
             updatedAddress?.address_line_1 ??
             profile.addressLine1,
-          area:
-            updatedData?.area ??
-            updatedAddress?.area ??
-            profile.area,
-          city:
-            updatedData?.city ??
-            updatedAddress?.city ??
-            profile.city,
-          state:
-            updatedData?.state ??
-            updatedAddress?.state ??
-            profile.state,
+          area: updatedData?.area ?? updatedAddress?.area ?? profile.area,
+          city: updatedData?.city ?? updatedAddress?.city ?? profile.city,
+          state: updatedData?.state ?? updatedAddress?.state ?? profile.state,
           pincode:
-            updatedData?.pincode ??
-            updatedAddress?.pincode ??
-            profile.pincode,
+            updatedData?.pincode ?? updatedAddress?.pincode ?? profile.pincode,
         };
 
         setProfile(updatedProfile);
         setSavedProfile(updatedProfile);
 
         if (updatedData?.profile_image) {
-          setServerProfileImage(
-            getImageUrl(updatedData.profile_image)
-          );
+          setServerProfileImage(getImageUrl(updatedData.profile_image));
         }
 
         setProfileImage(null);
@@ -549,7 +508,7 @@ export default function PersonalDetailsScreen() {
 
         Alert.alert(
           "Success",
-          response?.message || "Profile updated successfully."
+          response?.message || "Profile updated successfully.",
         );
 
         console.log("PROFILE UPDATE SUCCESS");
@@ -568,7 +527,7 @@ export default function PersonalDetailsScreen() {
       } else {
         Alert.alert(
           "Update Failed",
-          response?.message || "Unable to update profile."
+          response?.message || "Unable to update profile.",
         );
 
         console.log("PROFILE UPDATE FAILED:", response);
@@ -576,14 +535,14 @@ export default function PersonalDetailsScreen() {
     } catch (error) {
       console.log(
         "PROFILE UPDATE ERROR:",
-        error?.response?.data || error?.message || error
+        error?.response?.data || error?.message || error,
       );
 
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
           error?.message ||
-          "Something went wrong. Please try again."
+          "Something went wrong. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -639,10 +598,7 @@ export default function PersonalDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={Colors.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       <LinearGradient
         colors={Colors.gradients.background}
@@ -664,11 +620,7 @@ export default function PersonalDetailsScreen() {
                 style={styles.backButton}
                 disabled={saving}
               >
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color={Colors.white}
-                />
+                <Ionicons name="chevron-back" size={28} color={Colors.white} />
               </TouchableOpacity>
 
               <Text style={styles.headerTitle}>Personal Details</Text>
@@ -706,11 +658,7 @@ export default function PersonalDetailsScreen() {
                     {pickingImage ? (
                       <ActivityIndicator color={Colors.white} />
                     ) : (
-                      <Ionicons
-                        name="camera"
-                        size={21}
-                        color={Colors.white}
-                      />
+                      <Ionicons name="camera" size={21} color={Colors.white} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -723,20 +671,13 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.profileRole}>Delivery Partner</Text>
 
               <View style={styles.verifiedBadge}>
-                <Ionicons
-                  name="checkmark"
-                  size={21}
-                  color={Colors.white}
-                />
+                <Ionicons name="checkmark" size={21} color={Colors.white} />
                 <Text style={styles.verifiedText}>Verified Partner</Text>
               </View>
             </View>
 
             {/* PERSONAL INFORMATION */}
-            <SectionHeader
-              icon="person-outline"
-              title="Personal Information"
-            />
+            <SectionHeader icon="person-outline" title="Personal Information" />
 
             <View style={styles.detailsContainer}>
               <DetailCard
@@ -841,28 +782,28 @@ export default function PersonalDetailsScreen() {
                 saving={saving}
                 keyboardType="numeric"
               />
-             
-             <DetailCard
-             icon="location-outline"
-             label="Latitude"
-             field="latitude"
-             profile={profile}
-             updateField={updateField}
-             isEditing={isEditing}
-             saving={saving}
-             keyboardType="numeric"
-           />
 
-           <DetailCard
-             icon="location-outline"
-             label="Longitude"
-             field="longitude"
-             profile={profile}
-             updateField={updateField}
-             isEditing={isEditing}
-             saving={saving}
-             keyboardType="numeric"
-           />
+              <DetailCard
+                icon="location-outline"
+                label="Latitude"
+                field="latitude"
+                profile={profile}
+                updateField={updateField}
+                isEditing={isEditing}
+                saving={saving}
+                keyboardType="numeric"
+              />
+
+              <DetailCard
+                icon="location-outline"
+                label="Longitude"
+                field="longitude"
+                profile={profile}
+                updateField={updateField}
+                isEditing={isEditing}
+                saving={saving}
+                keyboardType="numeric"
+              />
             </View>
 
             {/* INFORMATION CARD */}
@@ -873,9 +814,7 @@ export default function PersonalDetailsScreen() {
                   size={24}
                   color={Colors.primary}
                 />
-                <Text style={styles.infoTitle}>
-                  Important Information
-                </Text>
+                <Text style={styles.infoTitle}>Important Information</Text>
               </View>
 
               <Text style={styles.infoText}>
@@ -898,10 +837,7 @@ export default function PersonalDetailsScreen() {
             {/* SAVE BUTTON */}
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[
-                styles.buttonWrapper,
-                saving && styles.disabledButton,
-              ]}
+              style={[styles.buttonWrapper, saving && styles.disabledButton]}
               onPress={isEditing ? handleSave : () => setIsEditing(true)}
               disabled={saving || pickingImage}
             >
@@ -912,16 +848,11 @@ export default function PersonalDetailsScreen() {
                 style={styles.saveButton}
               >
                 {saving ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={Colors.white}
-                  />
+                  <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
                   <Ionicons
                     name={
-                      isEditing
-                        ? "checkmark-circle-outline"
-                        : "create-outline"
+                      isEditing ? "checkmark-circle-outline" : "create-outline"
                     }
                     size={25}
                     color={Colors.white}
@@ -949,9 +880,7 @@ export default function PersonalDetailsScreen() {
               </TouchableOpacity>
             )}
 
-            <Text style={styles.footerText}>
-              BAKASURAN DELIVERY PARTNER
-            </Text>
+            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>

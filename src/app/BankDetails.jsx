@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import {
@@ -80,10 +79,7 @@ export default function BankDetailsScreen() {
     ];
 
     if (requiredFields.some((value) => !value.trim())) {
-      Alert.alert(
-        "Required Fields",
-        "Please fill all required bank details."
-      );
+      Alert.alert("Required Fields", "Please fill all required bank details.");
       return;
     }
 
@@ -93,7 +89,7 @@ export default function BankDetailsScreen() {
     if (!/^\d{9,18}$/.test(accountNumber)) {
       Alert.alert(
         "Invalid Account Number",
-        "Enter a valid account number containing 9 to 18 digits."
+        "Enter a valid account number containing 9 to 18 digits.",
       );
       return;
     }
@@ -104,7 +100,7 @@ export default function BankDetailsScreen() {
     if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) {
       Alert.alert(
         "Invalid IFSC Code",
-        "Please enter a valid 11-character IFSC code."
+        "Please enter a valid 11-character IFSC code.",
       );
       return;
     }
@@ -129,7 +125,7 @@ export default function BankDetailsScreen() {
       // Call POST API
       const response = await postMethod(
         "api/delivery/bank-details/update",
-        payload
+        payload,
       );
 
       console.log("BANK DETAILS API RESPONSE:", response);
@@ -161,27 +157,26 @@ export default function BankDetailsScreen() {
 
         Alert.alert(
           "Success",
-          response?.message ||
-            "Bank details updated successfully."
+          response?.message || "Bank details updated successfully.",
         );
       } else {
         Alert.alert(
           "Update Failed",
           response?.message ||
-            "Unable to update bank details. Please try again."
+            "Unable to update bank details. Please try again.",
         );
       }
     } catch (error) {
       console.log(
         "BANK DETAILS ERROR:",
-        error?.response?.data || error?.message
+        error?.response?.data || error?.message,
       );
 
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
           error?.message ||
-          "Something went wrong. Please try again."
+          "Something went wrong. Please try again.",
       );
     } finally {
       setIsSaving(false);
@@ -203,17 +198,11 @@ export default function BankDetailsScreen() {
   }) => (
     <View style={styles.detailCard}>
       <View style={styles.detailIcon}>
-        <Ionicons
-          name={icon}
-          size={27}
-          color={Colors.white}
-        />
+        <Ionicons name={icon} size={27} color={Colors.white} />
       </View>
 
       <View style={styles.detailContent}>
-        <Text style={styles.detailLabel}>
-          {label}
-        </Text>
+        <Text style={styles.detailLabel}>{label}</Text>
 
         {isEditing ? (
           <TextInput
@@ -229,9 +218,7 @@ export default function BankDetailsScreen() {
           />
         ) : (
           <Text style={styles.detailValue}>
-            {secure
-              ? `•••• •••• ${value.slice(-4)}`
-              : value}
+            {secure ? `•••• •••• ${value.slice(-4)}` : value}
           </Text>
         )}
       </View>
@@ -247,15 +234,9 @@ export default function BankDetailsScreen() {
       colors={["#260606", "#100303"]}
       style={styles.sectionHeader}
     >
-      <Ionicons
-        name={icon}
-        size={27}
-        color={Colors.primary}
-      />
+      <Ionicons name={icon} size={27} color={Colors.primary} />
 
-      <Text style={styles.sectionTitle}>
-        {title}
-      </Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
     </LinearGradient>
   );
 
@@ -265,10 +246,7 @@ export default function BankDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={Colors.background}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       <LinearGradient
         colors={Colors.gradients.background}
@@ -291,16 +269,10 @@ export default function BankDetailsScreen() {
                 onPress={() => router.back()}
                 disabled={isSaving}
               >
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color={Colors.white}
-                />
+                <Ionicons name="chevron-back" size={28} color={Colors.white} />
               </TouchableOpacity>
 
-              <Text style={styles.headerTitle}>
-                Bank Details
-              </Text>
+              <Text style={styles.headerTitle}>Bank Details</Text>
 
               <TouchableOpacity
                 style={styles.editIconButton}
@@ -323,19 +295,11 @@ export default function BankDetailsScreen() {
                 style={styles.bankIllustration}
               >
                 <View style={styles.bankIconContainer}>
-                  <Ionicons
-                    name="business"
-                    size={105}
-                    color={Colors.white}
-                  />
+                  <Ionicons name="business" size={105} color={Colors.white} />
                 </View>
 
                 <View style={styles.bankCheckIcon}>
-                  <Ionicons
-                    name="checkmark"
-                    size={30}
-                    color={Colors.white}
-                  />
+                  <Ionicons name="checkmark" size={30} color={Colors.white} />
                 </View>
               </LinearGradient>
 
@@ -346,11 +310,7 @@ export default function BankDetailsScreen() {
                 ]}
               >
                 <Ionicons
-                  name={
-                    isVerified
-                      ? "checkmark"
-                      : "time-outline"
-                  }
+                  name={isVerified ? "checkmark" : "time-outline"}
                   size={23}
                   color={Colors.white}
                 />
@@ -415,24 +375,17 @@ export default function BankDetailsScreen() {
 
             {/* UPI INFORMATION */}
 
-            <SectionHeader
-              icon="paper-plane-outline"
-              title="UPI Information"
-            />
+            <SectionHeader icon="paper-plane-outline" title="UPI Information" />
 
             <View style={styles.upiCard}>
               <View style={styles.upiContent}>
-                <Text style={styles.upiLabel}>
-                  UPI ID
-                </Text>
+                <Text style={styles.upiLabel}>UPI ID</Text>
 
                 {isEditing ? (
                   <TextInput
                     style={styles.upiInput}
                     value={details.upiId}
-                    onChangeText={(text) =>
-                      updateField("upiId", text)
-                    }
+                    onChangeText={(text) => updateField("upiId", text)}
                     placeholder="Enter UPI ID"
                     placeholderTextColor={Colors.placeholder}
                     autoCapitalize="none"
@@ -451,10 +404,7 @@ export default function BankDetailsScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[
-                styles.buttonWrapper,
-                isSaving && { opacity: 0.6 },
-              ]}
+              style={[styles.buttonWrapper, isSaving && { opacity: 0.6 }]}
               onPress={isEditing ? handleSave : handleEdit}
               disabled={isSaving}
             >
@@ -466,14 +416,9 @@ export default function BankDetailsScreen() {
               >
                 {isSaving ? (
                   <>
-                    <ActivityIndicator
-                      size="small"
-                      color={Colors.white}
-                    />
+                    <ActivityIndicator size="small" color={Colors.white} />
 
-                    <Text style={styles.saveButtonText}>
-                      Updating...
-                    </Text>
+                    <Text style={styles.saveButtonText}>Updating...</Text>
                   </>
                 ) : (
                   <>
@@ -488,9 +433,7 @@ export default function BankDetailsScreen() {
                     />
 
                     <Text style={styles.saveButtonText}>
-                      {isEditing
-                        ? "Save Bank Details"
-                        : "Edit Bank Details"}
+                      {isEditing ? "Save Bank Details" : "Edit Bank Details"}
                     </Text>
                   </>
                 )}
@@ -505,17 +448,13 @@ export default function BankDetailsScreen() {
                 onPress={handleCancel}
                 disabled={isSaving}
               >
-                <Text style={styles.cancelButtonText}>
-                  Cancel
-                </Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             )}
 
             {/* FOOTER */}
 
-            <Text style={styles.footerText}>
-              BAKASURAN DELIVERY PARTNER
-            </Text>
+            <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
