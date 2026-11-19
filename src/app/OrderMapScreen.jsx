@@ -29,9 +29,15 @@ const COLORS = {
 };
 
 export default function OrderMapScreen() {
-  const { orderId: rawOrderId, stage: rawStage } = useLocalSearchParams();
+  const {
+    orderId: rawOrderId,
+    id: fallbackId,
+    stage: rawStage,
+  } = useLocalSearchParams();
 
-  const orderId = Array.isArray(rawOrderId) ? rawOrderId[0] : rawOrderId;
+  const orderId = Array.isArray(rawOrderId)
+    ? rawOrderId[0]
+    : rawOrderId || (Array.isArray(fallbackId) ? fallbackId[0] : fallbackId);
 
   const stage = Array.isArray(rawStage)
     ? rawStage[0]

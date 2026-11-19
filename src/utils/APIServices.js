@@ -1,12 +1,11 @@
-// utils/APIServices.js
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import BASE_URL from "../constants/AppUrls";
 
-// =========================================================
-// CONFIG
-// =========================================================
+// =====================================================
+// CONFIGURATION
+// =====================================================
 
 export const TOKEN_KEY = "bakasuran_token";
 
@@ -14,9 +13,9 @@ const REQUEST_TIMEOUT = 30000;
 
 const API_BASE_URL = String(BASE_URL || "").replace(/\/+$/, "");
 
-// =========================================================
-// BUILD URL
-// =========================================================
+// =====================================================
+// BUILD API URL
+// =====================================================
 
 const buildUrl = (endpoint = "") => {
   if (!endpoint) {
@@ -25,198 +24,176 @@ const buildUrl = (endpoint = "") => {
 
   const value = String(endpoint).trim();
 
-  // Full URL
+  // Already a complete URL
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
 
-  // Remove starting slashes
+  // Remove leading slashes
   const cleanEndpoint = value.replace(/^\/+/, "");
+
+  if (!API_BASE_URL) {
+    throw new Error("BASE_URL is missing in AppUrls.");
+  }
 
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
-// =========================================================
+// =====================================================
 // BUILD HEADERS
-// =========================================================
+// =====================================================
 
-const buildHeaders = async () => {
-  try {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+const buildHeaders = async (isMultipart = false) => {
+  const headers = {
+    Accept: "application/json",
+  };
 
-    const headers = {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    };
+  const token = await AsyncStorage.getItem(TOKEN_KEY);
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    console.log("🔐 AUTH TOKEN:", token ? "TOKEN FOUND" : "NO TOKEN");
-
-    return headers;
-  } catch (error) {
-    console.log("❌ BUILD HEADERS ERROR:", error?.message);
-
-    return {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    };
+  if (token) {
+    headers.Authorization = `Bearer ${token.trim()}`;
   }
+
+  if (!isMultipart) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  console.log("AUTH TOKEN:", token ? "TOKEN FOUND" : "TOKEN NOT FOUND");
+
+  return headers;
 };
 
-// =========================================================
-// ERROR HANDLER
-// =========================================================
+// =====================================================
+// COMMON ERROR HANDLER
+// =====================================================
 
 const handleApiError = (error, method) => {
-  console.log("");
   console.log("====================================");
   console.log(`${method} API ERROR`);
-  console.log("====================================");
-
   console.log("MESSAGE:", error?.message);
 
-  // Server responded
   if (error?.response) {
     console.log("HTTP STATUS:", error.response.status);
-
     console.log(
       "SERVER RESPONSE:",
-      JSON.stringify(error.response.data, null, 2),
+      JSON.stringify(error.response.data, null, 2)
     );
 
     const responseData = error.response.data;
-    const defaultMessage = `Request failed with status ${error.response.status}.`;
 
     return {
-      ...(responseData &&
-      typeof responseData === "object" &&
-      !Array.isArray(responseData)
+      ...(responseData && typeof responseData === "object"
         ? responseData
         : {}),
       success: 0,
-      message: responseData?.message || defaultMessage,
-      status: error.response.status,
-      ...(responseData && typeof responseData !== "object"
-        ? { data: responseData }
-        : {}),
+      status: false,
+      httpStatus: error.response.status,
+      message:
+        responseData?.message ||
+        `Request failed with status ${error.response.status}.`,
     };
   }
 
-  // Request sent but no response
   if (error?.request) {
-    console.log("❌ NO RESPONSE FROM SERVER");
+    console.log("NO RESPONSE RECEIVED FROM SERVER");
+    console.log("CHECK NETWORK / SERVER / BASE URL");
+    console.log("REQUEST URL:", error?.config?.url);
+    console.log("REQUEST METHOD:", error?.config?.method);
 
     return {
       success: 0,
+      status: false,
+      httpStatus: 0,
       message:
-        "No response from server. Check the API server and network connection.",
-      status: 0,
+        "No response from server. Check your network connection and API server.",
     };
   }
 
-  // Other error
   return {
     success: 0,
-    message: error?.message || "Unable to complete the request.",
-    status: 0,
+    status: false,
+    httpStatus: 0,
+    message: error?.message || "Unable to complete request.",
   };
 };
 
-// =========================================================
+// =====================================================
 // POST METHOD
-//
-// Supports:
-//
-// postMethod(url, data)
-//
-// postMethod(url, null, data)
-//
-// =========================================================
+// Supports JSON and FormData
+// =====================================================
 
 export const postMethod = async (
   endpoint,
   userOrData = null,
-  optionalData = undefined,
+  optionalData = undefined
 ) => {
+  console.log("========== POST METHOD START ==========");
+
   try {
     const url = buildUrl(endpoint);
 
-    let data = {};
+    const data =
+      optionalData !== undefined
+        ? optionalData || {}
+        : userOrData || {};
 
-    // Old format:
-    // postMethod(url, null, data)
-    if (optionalData !== undefined) {
-      data = optionalData || {};
-    } else {
-      // New format:
-      // postMethod(url, data)
-      data = userOrData || {};
+    const isMultipart =
+      typeof FormData !== "undefined" && data instanceof FormData;
+
+    const headers = await buildHeaders(isMultipart);
+
+    console.log("POST API REQUEST");
+    console.log("FINAL URL:", url);
+    console.log("REQUEST TYPE:", isMultipart ? "MULTIPART" : "JSON");
+
+    if (!isMultipart) {
+      console.log("REQUEST BODY:", JSON.stringify(data, null, 2));
     }
-
-    const headers = await buildHeaders();
-
-    console.log("");
-    console.log("====================================");
-    console.log("📤 POST API REQUEST");
-    console.log("====================================");
-    console.log("METHOD:", "POST");
-    console.log("URL:", url);
-    console.log("REQUEST BODY:", JSON.stringify(data, null, 2));
-    console.log("====================================");
 
     const response = await axios.post(url, data, {
       headers,
       timeout: REQUEST_TIMEOUT,
     });
 
-    console.log("");
-    console.log("====================================");
-    console.log("📥 POST API RESPONSE");
-    console.log("====================================");
-    console.log("STATUS:", response.status);
-    console.log("DATA:", JSON.stringify(response.data, null, 2));
-    console.log("====================================");
+    console.log("========== POST API SUCCESS ==========");
+    console.log("HTTP STATUS:", response.status);
+    console.log(
+      "RESPONSE DATA:",
+      JSON.stringify(response.data, null, 2)
+    );
 
-    return response.data;
+    return {
+      ...(response.data &&
+      typeof response.data === "object"
+        ? response.data
+        : {}),
+      httpStatus: response.status,
+    };
   } catch (error) {
     return handleApiError(error, "POST");
+  } finally {
+    console.log("========== POST METHOD END ==========");
   }
 };
 
-// =========================================================
+// =====================================================
 // GET METHOD
-// =========================================================
+// =====================================================
 
 export const getMethod = async (endpoint) => {
   try {
     const url = buildUrl(endpoint);
+    const headers = await buildHeaders(false);
 
-    const headers = await buildHeaders();
-
-    console.log("");
-    console.log("====================================");
-    console.log("📥 GET API REQUEST");
-    console.log("====================================");
-    console.log("METHOD:", "GET");
-    console.log("ENDPOINT:", endpoint);
-    console.log("FINAL URL:", url);
-    console.log("====================================");
+    console.log("GET API REQUEST:", url);
 
     const response = await axios.get(url, {
       headers,
       timeout: REQUEST_TIMEOUT,
     });
 
-    console.log("");
-    console.log("====================================");
-    console.log("📥 GET API RESPONSE");
-    console.log("====================================");
-    console.log("STATUS:", response.status);
-    console.log("DATA:", JSON.stringify(response.data, null, 2));
-    console.log("====================================");
+    console.log("GET API SUCCESS:", response.status);
+    console.log("GET RESPONSE:", JSON.stringify(response.data, null, 2));
 
     return response.data;
   } catch (error) {
@@ -224,29 +201,23 @@ export const getMethod = async (endpoint) => {
   }
 };
 
-// =========================================================
+// =====================================================
 // PUT METHOD
-// =========================================================
+// =====================================================
 
 export const putMethod = async (endpoint, data = {}) => {
   try {
     const url = buildUrl(endpoint);
-    const headers = await buildHeaders();
+    const headers = await buildHeaders(false);
 
-    console.log("");
-    console.log("====================================");
-    console.log("📤 PUT API REQUEST");
-    console.log("====================================");
-    console.log("URL:", url);
-    console.log("REQUEST BODY:", JSON.stringify(data, null, 2));
+    console.log("PUT API REQUEST:", url);
 
     const response = await axios.put(url, data, {
       headers,
       timeout: REQUEST_TIMEOUT,
     });
 
-    console.log("STATUS:", response.status);
-    console.log("DATA:", JSON.stringify(response.data, null, 2));
+    console.log("PUT API SUCCESS:", response.status);
 
     return response.data;
   } catch (error) {
@@ -254,29 +225,23 @@ export const putMethod = async (endpoint, data = {}) => {
   }
 };
 
-// =========================================================
+// =====================================================
 // PATCH METHOD
-// =========================================================
+// =====================================================
 
 export const patchMethod = async (endpoint, data = {}) => {
   try {
     const url = buildUrl(endpoint);
-    const headers = await buildHeaders();
+    const headers = await buildHeaders(false);
 
-    console.log("");
-    console.log("====================================");
-    console.log("📤 PATCH API REQUEST");
-    console.log("====================================");
-    console.log("URL:", url);
-    console.log("REQUEST BODY:", JSON.stringify(data, null, 2));
+    console.log("PATCH API REQUEST:", url);
 
     const response = await axios.patch(url, data, {
       headers,
       timeout: REQUEST_TIMEOUT,
     });
 
-    console.log("STATUS:", response.status);
-    console.log("DATA:", JSON.stringify(response.data, null, 2));
+    console.log("PATCH API SUCCESS:", response.status);
 
     return response.data;
   } catch (error) {
@@ -284,71 +249,31 @@ export const patchMethod = async (endpoint, data = {}) => {
   }
 };
 
-// =========================================================
+// =====================================================
 // DELETE METHOD
-// =========================================================
+// =====================================================
 
 export const deleteMethod = async (endpoint) => {
   try {
     const url = buildUrl(endpoint);
-    const headers = await buildHeaders();
+    const headers = await buildHeaders(false);
 
-    console.log("====================================");
-    console.log("DELETE API REQUEST");
-    console.log("ENDPOINT:", endpoint);
-    console.log("FINAL URL:", url);
-    console.log("HEADERS:", headers);
-    console.log("====================================");
+    console.log("DELETE API REQUEST:", url);
 
     const response = await axios.delete(url, {
       headers,
-      timeout: 30000,
-      validateStatus: () => true,
+      timeout: REQUEST_TIMEOUT,
     });
 
-    console.log("====================================");
-    console.log("DELETE API RESPONSE");
-    console.log("STATUS:", response.status);
-    console.log("DATA:", JSON.stringify(response.data, null, 2));
-    console.log("====================================");
-
-    if (response.status >= 200 && response.status < 300) {
-      return {
-        success: 1,
-        message:
-          response.data?.message || "Wishlist item deleted successfully.",
-        data: response.data?.data ?? response.data,
-        status: response.status,
-      };
-    }
+    console.log("DELETE API SUCCESS:", response.status);
 
     return {
-      success: 0,
-      message:
-        response.data?.message ||
-        response.data?.error ||
-        `Request failed with status ${response.status}`,
-      data: response.data,
+      success: 1,
       status: response.status,
+      message: response.data?.message || "Deleted successfully.",
+      data: response.data?.data ?? response.data,
     };
   } catch (error) {
-    console.log("====================================");
-    console.log("DELETE API ERROR");
-    console.log("MESSAGE:", error?.message);
-    console.log("URL:", error?.config?.url);
-    console.log("METHOD:", error?.config?.method);
-    console.log("BASE URL:", error?.config?.baseURL);
-    console.log("RESPONSE:", error?.response?.data);
-    console.log("STATUS:", error?.response?.status);
-    console.log("CODE:", error?.code);
-    console.log("====================================");
-
-    return {
-      success: 0,
-      message:
-        error?.response?.data?.message || error?.message || "Network error",
-      data: error?.response?.data || null,
-      status: error?.response?.status || 0,
-    };
+    return handleApiError(error, "DELETE");
   }
 };

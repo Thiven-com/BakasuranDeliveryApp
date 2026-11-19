@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
 
   greeting: {
     color: COLORS.white,
-    fontSize: 26,
+    fontSize: 16,
     fontWeight: "800",
     marginTop: 30,
   },
