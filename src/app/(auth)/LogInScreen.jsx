@@ -1,8 +1,11 @@
+
 import { useState } from "react";
 
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -19,59 +23,78 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// COMMON STYLES
-import Colors from "../../constants/Colors";
 import Fonts from "../../constants/Fonts";
 import { deliveryLogin } from "../../utils/Function";
 
+const RED = "#FF101B";
+const DARK = "#050505";
+const WHITE = "#FFFFFF";
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
   const [mobileNumber, setMobileNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // HANDLE MOBILE NUMBER
+  const bannerHeight = Math.min(width * 0.99, 410);
+
+  // MOBILE NUMBER VALIDATION
   const handleMobileChange = (value) => {
     const cleaned = value.replace(/[^0-9]/g, "").slice(0, 10);
     setMobileNumber(cleaned);
   };
 
-  // SEND OTP
+  // SEND OTP API
   const handleSendOTP = async () => {
     if (mobileNumber.length !== 10) {
       Alert.alert(
         "Invalid Mobile Number",
-        "Please enter a valid 10-digit mobile number.",
+        "Please enter a valid 10-digit mobile number."
       );
       return;
     }
 
+    if (loading) return;
+
     try {
       setLoading(true);
 
+      console.log("LOGIN API START:", mobileNumber);
+
       const data = await deliveryLogin(mobileNumber);
 
-      if (!data || data.success === 0 || data.success === false) {
+      console.log("LOGIN API RESPONSE:", data);
+
+      if (
+        !data ||
+        data.success === 0 ||
+        data.success === false
+      ) {
         throw new Error(
-          data?.message || "Unable to send OTP. Please try again.",
+          data?.message || "Unable to send OTP. Please try again."
         );
       }
 
-      console.log("Login API Response:", data);
+      Alert.alert(
+        "Success",
+        data.message || "OTP sent successfully."
+      );
 
-      Alert.alert("Success", data.message || "OTP sent successfully.");
-
-      // Navigate to OTP screen after successful API response
       router.push({
         pathname: "/OTPScreen",
         params: {
           mobile: mobileNumber,
         },
       });
-    } catch (error) {
-      console.log("Login API Error:", error);
 
-      Alert.alert("Login Failed", error.message || "Something went wrong.");
+    } catch (error) {
+      console.log("LOGIN API ERROR:", error);
+
+      Alert.alert(
+        "Login Failed",
+        error.message || "Something went wrong."
+      );
     } finally {
       setLoading(false);
     }
@@ -79,144 +102,219 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={DARK}
+      />
 
       <LinearGradient
-        colors={["#170303", Colors.background, "#080808", "#100202"]}
-        locations={[0, 0.35, 0.75, 1]}
+        colors={["#100000", "#050505", "#080000"]}
         style={styles.gradient}
       >
         <KeyboardAvoidingView
-          style={styles.keyboardContainer}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboard}
+          behavior={
+            Platform.OS === "ios" ? "padding" : undefined
+          }
         >
           <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}
           >
-            {/* LOGO SECTION */}
 
-            <View style={styles.logoSection}>
+            {/* PROMOTIONAL BANNER */}
+
+            <ImageBackground
+              source={require(
+                "../../../assets/images/bakasuran-login-banner.png"
+              )}
+              style={[
+                styles.banner,
+                { height: bannerHeight },
+              ]}
+              resizeMode="cover"
+            >
+              {/* ACTUAL BAKASURAN LOGO */}
+
               <Image
-                source={require("../../../assets/images/logo.png")}
+                source={require(
+                  "../../../assets/images/logo.png"
+                )}
                 style={styles.logo}
                 resizeMode="contain"
               />
+            </ImageBackground>
 
-              <Text style={styles.partnerText}>Delivery Partner</Text>
-            </View>
+            {/* LOGIN CARD */}
 
-            {/* LOGIN HEADING */}
+            <View style={styles.loginCard}>
 
-            <View style={styles.headingSection}>
-              <Text style={styles.heading}>Login</Text>
+              {/* USER ICON */}
 
-              <Text style={styles.description}>Enter your mobile number</Text>
-
-              <Text style={styles.description}>to get started</Text>
-            </View>
-
-            {/* MOBILE INPUT */}
-
-            <View style={styles.inputContainer}>
-              <View style={styles.phoneInput}>
-                <View style={styles.countrySection}>
-                  <Text style={styles.flag}>🇮🇳</Text>
-
-                  <Text style={styles.countryCode}>+91</Text>
-                </View>
-
-                <View style={styles.verticalLine} />
-
-                <TextInput
-                  style={styles.mobileInput}
-                  placeholder="98765 43210"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  value={mobileNumber}
-                  onChangeText={handleMobileChange}
-                  selectionColor={Colors.primary}
-                />
-
-                {mobileNumber.length > 0 && (
-                  <TouchableOpacity onPress={() => setMobileNumber("")}>
-                    <Ionicons
-                      name="close-circle"
-                      size={18}
-                      color={Colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                )}
+              <View style={styles.userIconContainer}>
+                <LinearGradient
+                  colors={["#FF3434", "#D90000"]}
+                  style={styles.userIcon}
+                >
+                  <Ionicons
+                    name="person"
+                    size={34}
+                    color={WHITE}
+                  />
+                </LinearGradient>
               </View>
 
-              <Text style={styles.inputHint}>
-                {mobileNumber.length}/10 digits
+              {/* HEADING */}
+
+              <Text style={styles.heading}>
+                Login
               </Text>
+
+              <Text style={styles.description}>
+                Enter your mobile number
+              </Text>
+
+              <Text style={styles.description}>
+                to get started
+              </Text>
+
+              {/* MOBILE INPUT */}
+
+              <View style={styles.inputContainer}>
+                <View style={styles.phoneInput}>
+
+                  {/*<Ionicons
+                    name="call"
+                    size={27}
+                    color={WHITE}
+                  />*/}
+
+                  <Text style={styles.countryCode}>
+                    +91
+                  </Text>
+
+                  <View style={styles.verticalLine} />
+
+                  <TextInput
+                    style={styles.mobileInput}
+                    placeholder="Enter mobile number"
+                    placeholderTextColor="#858585"
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    value={mobileNumber}
+                    onChangeText={handleMobileChange}
+                    selectionColor={RED}
+                    editable={!loading}
+                  />
+
+                  {mobileNumber.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => setMobileNumber("")}
+                      disabled={loading}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={21}
+                        color="#888888"
+                      />
+                    </TouchableOpacity>
+                  )}
+
+                </View>
+
+                <Text style={styles.inputHint}>
+                  {mobileNumber.length}/10 digits
+                </Text>
+              </View>
+
+              {/* SEND OTP BUTTON */}
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleSendOTP}
+                disabled={loading}
+                style={[
+                  styles.buttonWrapper,
+                  loading && { opacity: 0.7 },
+                ]}
+              >
+                <LinearGradient
+                  colors={["#FF2929", "#F00000", "#C90000"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.sendButton}
+                >
+                  {loading ? (
+                    <ActivityIndicator
+                      color={WHITE}
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>
+                        Send OTP
+                      </Text>
+
+                      <Ionicons
+                        name="arrow-forward"
+                        size={29}
+                        color={WHITE}
+                      />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
             </View>
 
-            {/* SEND OTP BUTTON */}
+            {/* BOTTOM BENEFITS */}
 
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={handleSendOTP}
-              disabled={loading}
-              style={styles.buttonWrapper}
-            >
-              <LinearGradient
-                colors={Colors.gradients.primary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.sendButton}
-              >
-                <Text style={styles.buttonText}>
-                  {loading ? "Please wait..." : "Send OTP"}
+            <View style={styles.benefitsContainer}>
+
+              <View style={styles.benefitItem}>
+                <Ionicons
+                  name="bicycle-outline"
+                  size={30}
+                  color={RED}
+                />
+                <Text style={styles.benefitText}>
+                  Fast{"\n"}Deliveries
                 </Text>
+              </View>
 
-                {!loading && (
-                  <Ionicons
-                    name="arrow-forward"
-                    size={20}
-                    color={Colors.white}
-                  />
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+              <View style={styles.benefitDivider} />
 
-            {/* BOTTOM DECORATION */}
+              <View style={styles.benefitItem}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={30}
+                  color={RED}
+                />
+                <Text style={styles.benefitText}>
+                  Safe &{"\n"}Secure
+                </Text>
+              </View>
 
-            {/*<View style={styles.bottomDecoration}>
-              <Ionicons
-                name="pizza-outline"
-                size={22}
-                color={Colors.redOverlay}
-              />
+              <View style={styles.benefitDivider} />
 
-              <Ionicons
-                name="fast-food-outline"
-                size={22}
-                color={Colors.redOverlay}
-              />
+              <View style={styles.benefitItem}>
+                <Ionicons
+                  name="people-outline"
+                  size={30}
+                  color={RED}
+                />
+                <Text style={styles.benefitText}>
+                  Grow{"\n"}Together
+                </Text>
+              </View>
 
-              <Ionicons
-                name="restaurant-outline"
-                size={22}
-                color={Colors.redOverlay}
-              />
+            </View>
 
-              <Ionicons
-                name="cafe-outline"
-                size={22}
-                color={Colors.redOverlay}
-              />
+            {/* BOTTOM SPACE */}
 
-              <Ionicons
-                name="pizza-outline"
-                size={22}
-                color={Colors.redOverlay}
-              />
-            </View>*/}
+            <View style={{ height: 20 }} />
+
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
@@ -225,161 +323,217 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  // MAIN CONTAINER
+
+  // MAIN SCREEN
 
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: DARK,
   },
 
   gradient: {
     flex: 1,
   },
 
-  keyboardContainer: {
+  keyboard: {
     flex: 1,
   },
 
   scrollContent: {
     flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 25,
-    paddingBottom: 20,
+    paddingBottom: 15,
   },
 
-  // LOGO
+  // PROMOTIONAL BANNER
 
-  logoSection: {
-    alignItems: "center",
-    marginTop: 12,
+  banner: {
+    width: "100%",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    overflow: "hidden",
   },
 
   logo: {
-    width: 135,
-    height: 85,
+    width: 145,
+    height: 145,
+    marginTop: 8,
+    marginLeft: 18,
   },
 
-  partnerText: {
-    color: Colors.textPrimary,
-    fontFamily: Fonts.bold,
-    fontSize: 15,
-    fontStyle: "italic",
-    marginTop: -2,
+  // LOGIN CARD
+
+  loginCard: {
+    width: "90%",
+    alignSelf: "center",
+    backgroundColor: "#090909",
+    borderWidth: 1.5,
+    borderColor: "#8F1010",
+    borderRadius: 40,
+    paddingHorizontal: 24,
+    paddingTop: 25,
+    paddingBottom: 10,
+    marginTop: -5,
+
+    shadowColor: RED,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 15,
+    elevation: 12,
+  },
+
+  userIconContainer: {
+    position: "absolute",
+    top: -34,
+    alignSelf: "center",
+  },
+
+  userIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FF5555",
+    elevation: 10,
   },
 
   // HEADING
 
-  headingSection: {
-    alignItems: "center",
-    marginTop: 28,
-  },
-
   heading: {
-    fontSize: 22,
-    color: Colors.textPrimary,
-    fontFamily: Fonts.extraBold,
-    marginBottom: 12,
+    color: WHITE,
+    fontFamily: Fonts.regular,
+    fontSize: 39,
+    textAlign: "center",
+    marginBottom: 15,
   },
 
   description: {
-    color: Colors.textSecondary,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 19,
+    color: "#BBBBBB",
+    fontFamily: Fonts.medium,
+    fontSize: 18,
+    lineHeight: 15,
     textAlign: "center",
   },
 
-  // MOBILE INPUT
+  // PHONE INPUT
 
   inputContainer: {
     width: "100%",
-    marginTop: 18,
+    marginTop: 23,
   },
 
   phoneInput: {
     width: "100%",
-    height: 49,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderRadius: 11,
-    backgroundColor: Colors.backgroundLight,
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: RED,
+    borderRadius: 23,
+    backgroundColor: "#141010",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-  },
-
-  countrySection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-
-  flag: {
-    fontSize: 19,
+    paddingHorizontal: 16,
   },
 
   countryCode: {
-    color: Colors.textPrimary,
-    fontFamily: Fonts.semiBold,
-    fontSize: 13,
+    color: WHITE,
+    fontFamily: Fonts.bold,
+    fontSize: 20,
+    marginLeft: 5,
   },
 
   verticalLine: {
     width: 1,
-    height: 25,
-    backgroundColor: Colors.border,
-    marginHorizontal: 10,
+    height: 35,
+    backgroundColor: "#666666",
+    marginHorizontal: 7,
   },
 
   mobileInput: {
     flex: 1,
-    color: Colors.textPrimary,
-    fontFamily: Fonts.medium,
-    fontSize: 14,
     height: "100%",
-    paddingHorizontal: 2,
+    color: WHITE,
+    fontFamily: Fonts.regular,
+    fontSize: 19,
+    paddingHorizontal: 0,
   },
 
   inputHint: {
-    color: Colors.textMuted,
+    color: "#777777",
     fontFamily: Fonts.regular,
-    fontSize: 10,
+    fontSize: 18,
     textAlign: "right",
-    marginTop: 5,
+    marginTop: 7,
+    marginRight: 5,
   },
 
-  // BUTTON
+  // SEND OTP BUTTON
 
   buttonWrapper: {
     width: "100%",
     marginTop: 10,
-    borderRadius: 11,
+    borderRadius: 35,
     overflow: "hidden",
+
+    shadowColor: RED,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 9,
   },
 
   sendButton: {
-    height: 48,
+    height: 60,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    alignItems: "center",
+    gap: 17,
+    borderRadius: 35,
+    borderWidth: 1,
+    borderColor: "#FF5252",
   },
 
   buttonText: {
-    color: Colors.white,
-    fontFamily: Fonts.extraBold,
-    fontSize: 15,
+    color: WHITE,
+    fontFamily: Fonts.regular,
+    fontSize: 26,
   },
 
-  // BOTTOM DECORATION
+  // BOTTOM BENEFITS
 
-  bottomDecoration: {
-    width: "100%",
+  benefitsContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: "auto",
-    paddingTop: 35,
-    paddingBottom: 10,
-    opacity: 0.7,
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    width: "90%",
+    alignSelf: "center",
+    marginTop: 35,
+    paddingVertical: 15,
   },
+
+  benefitItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+
+  benefitText: {
+    color: "#BBBBBB",
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  benefitDivider: {
+    width: 1,
+    height: 42,
+    backgroundColor: "#555555",
+  },
+
 });

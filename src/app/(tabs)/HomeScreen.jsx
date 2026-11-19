@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: COLORS.white,
     fontSize: 14,
-    marginTop: 12,
+    marginTop: 18,
   },
 
   scrollContent: {
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
 
   // Online Card
   onlineCard: {
-    height: 58,
+    height: 60,
     backgroundColor: "#075B1D",
     borderRadius: 13,
     borderWidth: 1,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 17,
+    marginBottom: 45,
     elevation: 5,
     shadowColor: "#00E63A",
     shadowOpacity: 0.25,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   // Statistics
   statsContainer: {
     flexDirection: "row",
-    gap: 20,
+    gap: 30,
     marginBottom: 30,
   },
 
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    rowGap: 25,
+    rowGap: 35,
   },
 
   dashboardCard: {
@@ -459,6 +459,6 @@ const styles = StyleSheet.create({
   },
 
   bottomSpace: {
-    height: 12,
+    height: 20,
   },
 });

@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: Colors.white,
-    fontSize: 21,
+    fontSize: 24,
     fontFamily: Fonts.extraBold,
   },
 
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
 
   heroDescription: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     lineHeight: 21,
     textAlign: "center",
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
 
   progressTitle: {
     color: Colors.white,
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: Fonts.bold,
   },
 
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
 
   progressPercentage: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 17,
     fontFamily: Fonts.medium,
     marginTop: 8,
     textAlign: "right",
@@ -874,15 +874,15 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: Colors.white,
-    fontSize: 18,
-    fontFamily: Fonts.bold,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     marginBottom: 14,
   },
 
   inputLabel: {
     color: Colors.textSecondary,
-    fontSize: 13,
-    fontFamily: Fonts.medium,
+    fontSize: 16,
+    fontFamily: Fonts.regular,
     marginBottom: 8,
   },
 
@@ -894,13 +894,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     color: Colors.white,
-    fontSize: 15,
-    fontFamily: Fonts.medium,
+    fontSize: 17,
+    fontFamily: Fonts.regular,
   },
 
   inputHint: {
     color: Colors.textMuted,
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: Fonts.regular,
     textAlign: "right",
     marginTop: 5,
@@ -937,13 +937,13 @@ const styles = StyleSheet.create({
 
   documentTitle: {
     color: Colors.white,
-    fontSize: 14,
+    fontSize: 19,
     fontFamily: Fonts.bold,
   },
 
   documentDescription: {
     color: Colors.textSecondary,
-    fontSize: 11,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     marginTop: 4,
   },
@@ -1054,8 +1054,8 @@ const styles = StyleSheet.create({
 
   submitButtonText: {
     color: Colors.white,
-    fontSize: 15,
-    fontFamily: Fonts.bold,
+    fontSize: 19,
+    fontFamily: Fonts.regular,
   },
 
   footerText: {

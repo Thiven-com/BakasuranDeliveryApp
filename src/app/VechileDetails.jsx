@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: Colors.white,
-    fontSize: 16,
+    fontSize: 22,
     fontFamily: Fonts.bold,
   },
 
@@ -922,14 +922,14 @@ const styles = StyleSheet.create({
 
   detailLabel: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 19,
     fontFamily: Fonts.medium,
     marginBottom: 6,
   },
 
   detailValue: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: Fonts.semiBold,
   },
 
@@ -1017,7 +1017,7 @@ const styles = StyleSheet.create({
 
   infoText: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.regular,
     lineHeight: 23,
   },
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: Colors.white,
     fontSize: 16,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
   },
 
   cancelButton: {
@@ -1060,8 +1060,8 @@ const styles = StyleSheet.create({
 
   footerText: {
     color: Colors.textMuted,
-    fontSize: 10,
-    fontFamily: Fonts.medium,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
     textAlign: "center",
     letterSpacing: 2,
     marginTop: 30,
