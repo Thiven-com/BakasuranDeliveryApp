@@ -12,17 +12,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 import { getDeliveryEarnings } from "../../utils/Function";
 
 const COLORS = {
-  background: "#050505",
-  card: "#191919",
-  cardBorder: "#242424",
-  red: "#F9080C",
-  redDark: "#B80000",
-  white: "#FFFFFF",
-  gray: "#B8B8B8",
-  gold: "#F5B51B",
+  background: Colors.background,
+  card: Colors.card,
+  cardBorder: Colors.border,
+  red: Colors.primary,
+  redDark: Colors.primaryDark,
+  white: Colors.white,
+  gray: Colors.textSecondary,
+  gold: Colors.gold,
 };
 
 const formatCurrency = (value) =>
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 25,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   headerRight: {
@@ -232,14 +234,14 @@ const styles = StyleSheet.create({
   todayLabel: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     marginBottom: 5,
   },
 
   todayAmount: {
     color: COLORS.white,
     fontSize: 28,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   // Statistics
@@ -265,7 +267,7 @@ const styles = StyleSheet.create({
   statTitle: {
     color: COLORS.gray,
     fontSize: 17,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     marginTop: 5,
     marginBottom: 4,
   },
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
   statValue: {
     color: COLORS.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   // Withdraw Button
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
   withdrawText: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   // Weekly Earnings
@@ -310,13 +312,13 @@ const styles = StyleSheet.create({
   weekLabel: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     marginBottom: 5,
   },
 
   weekAmount: {
     color: COLORS.white,
     fontSize: 21,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 });

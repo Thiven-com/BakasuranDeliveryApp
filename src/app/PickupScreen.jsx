@@ -15,17 +15,19 @@ import Svg, {
   Path,
   Circle,
 } from "react-native-svg";
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 
 const COLORS = {
-  background: "#050505",
-  map: "#17191A",
-  road: "#292C2D",
-  roadLight: "#343738",
-  red: "#F9080C",
-  white: "#FFFFFF",
-  gray: "#BDBDBD",
-  yellow: "#F5E36B",
-  card: "#111111",
+  background: Colors.background,
+  map: Colors.card,
+  road: Colors.border,
+  roadLight: Colors.textMuted,
+  red: Colors.primary,
+  white: Colors.white,
+  gray: Colors.textSecondary,
+  yellow: Colors.warning,
+  card: Colors.backgroundLight,
 };
 
 export default function NavigateToPickupScreen() {
@@ -222,7 +224,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   headerRight: {
@@ -286,7 +288,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     color: COLORS.white,
     fontSize: 21,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginBottom: 2,
   },
 
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
   distanceText: {
     color: COLORS.yellow,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   navigationButton: {

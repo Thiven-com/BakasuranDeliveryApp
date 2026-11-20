@@ -15,17 +15,19 @@ import {
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 import { getOrderDetails } from "../utils/Function";
 
 const COLORS = {
-  background: "#0A0A0A",
-  card: "#161616",
-  border: "#292929",
-  red: "#F9080C",
-  white: "#FFFFFF",
-  gray: "#999999",
-  gold: "#F5B51B",
-  green: "#20D34A",
+  background: Colors.background,
+  card: Colors.card,
+  border: Colors.border,
+  red: Colors.primary,
+  white: Colors.white,
+  gray: Colors.textMuted,
+  gold: Colors.gold,
+  green: Colors.primary,
 };
 
 export default function OrderMapScreen() {
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   center: {
@@ -507,7 +509,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginTop: 14,
   },
 
@@ -548,14 +550,14 @@ const styles = StyleSheet.create({
   smallLabel: {
     color: COLORS.gray,
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     letterSpacing: 1,
   },
 
   orderNumber: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginTop: 3,
   },
 
@@ -580,7 +582,7 @@ const styles = StyleSheet.create({
   stageTitle: {
     color: COLORS.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   stageDescription: {
@@ -593,7 +595,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginBottom: 14,
   },
 
@@ -625,7 +627,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 14,
-    backgroundColor: "rgba(32,211,74,0.14)",
+    backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -634,21 +636,21 @@ const styles = StyleSheet.create({
   locationType: {
     color: COLORS.gold,
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 1,
   },
 
   customerLocationType: {
     color: COLORS.green,
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 1,
   },
 
   locationName: {
     color: COLORS.white,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginTop: 4,
   },
 
@@ -697,7 +699,7 @@ const styles = StyleSheet.create({
   pickupTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginTop: 12,
   },
 
@@ -724,6 +726,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 });

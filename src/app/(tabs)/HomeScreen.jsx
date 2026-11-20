@@ -14,17 +14,19 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 import { getDeliveryHome } from "../../utils/Function";
 const COLORS = {
-  background: "#050505",
-  card: "#1C1C1C",
-  cardLight: "#242424",
-  primary: "#F9080C",
-  redDark: "#B80000",
-  white: "#FFFFFF",
-  gray: "#A0A0A0",
-  green: "#00D639",
-  gold: "#F5B51B",
+  background: Colors.background,
+  card: Colors.card,
+  cardLight: Colors.cardLight,
+  primary: Colors.primary,
+  redDark: Colors.primaryDark,
+  white: Colors.white,
+  gray: Colors.textMuted,
+  green: Colors.success,
+  gold: Colors.gold,
 };
 
 export default function HomeScreen() {
@@ -280,7 +282,7 @@ const styles = StyleSheet.create({
   greeting: {
     color: COLORS.white,
     fontSize: 16,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     marginTop: 30,
   },
 
@@ -292,7 +294,7 @@ const styles = StyleSheet.create({
     color: "#BDBDBD",
     fontSize: 19,
     marginTop: 10,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
   },
 
   avatar: {
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
   retryText: {
     color: COLORS.white,
     fontSize: 12,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   // Online Card
@@ -374,7 +376,7 @@ const styles = StyleSheet.create({
   onlineText: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   // Statistics
@@ -398,14 +400,14 @@ const styles = StyleSheet.create({
   statNumber: {
     color: COLORS.white,
     fontSize: 23,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   statLabel: {
     color: "#D0D0D0",
     fontSize: 18,
     marginTop: 10,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
   },
 
   // Dashboard
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
   dashboardTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 
   badge: {
@@ -455,7 +457,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: COLORS.white,
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   bottomSpace: {

@@ -1,56 +1,41 @@
 const Colors = {
-  // Primary colors
-  primary: "#F10D16",
-  primaryDark: "#D9000B",
-  primaryLight: "#FF343D",
+  primary: "#F1070A",
+  primaryDark: "#CA0203",
+  primaryLight: "#FC1212",
 
-  // Background colors
-  background: "#050505",
-  backgroundDark: "#000000",
-  backgroundLight: "#111111",
-  card: "#151515",
-  cardLight: "#1C1C1C",
+  background: "#000000",
+  backgroundDark: "#050101",
+  backgroundLight: "#0D0B0A",
 
-  // Text colors
+  card: "#161616",
+  cardLight: "#21110F",
+
   white: "#FFFFFF",
   black: "#000000",
+
   textPrimary: "#FFFFFF",
-  textSecondary: "#BBBBBB",
-  textMuted: "#777777",
-  placeholder: "#666666",
+  textSecondary: "#D0D0D0",
+  textMuted: "#9A9A9A",
+  placeholder: "#777777",
 
-  // Border colors
-  border: "#444444",
-  borderLight: "#777777",
-  borderRed: "#F10D16",
+  border: "#333333",
+  borderRed: "#F1070A",
 
-  // Status colors
-  success: "#00B72D",
-  warning: "#FFA500",
-  error: "#FF3030",
-  info: "#2196F3",
+  success: "#00C853",
+  warning: "#F5B51B",
+  error: "#F1070A",
 
-  // Delivery status
-  online: "#00C853",
-  offline: "#777777",
-  pending: "#FFA500",
-  accepted: "#2196F3",
-  pickedUp: "#9C27B0",
-  delivered: "#00B72D",
-  cancelled: "#F10D16",
+  gold: "#F5B51B",
 
-  // Gradients
   gradients: {
-    primary: ["#FF101A", "#E6000B"],
-    background: ["#180303", "#050505", "#080808"],
-    card: ["#202020", "#111111"],
-    success: ["#00D13B", "#008F25"],
+    primary: ["#F1070A", "#CA0203"],
+    background: ["#000000"],
+    card: ["#21110F", "#0D0B0A"],
   },
 
-  // Shadows and overlays
-  overlay: "rgba(0, 0, 0, 0.65)",
-  redOverlay: "rgba(241, 13, 22, 0.15)",
-  shadow: "#000000",
+  overlay: "rgba(0,0,0,0.65)",
+  redOverlay: "rgba(241,7,10,0.15)",
+  goldOverlay: "rgba(245,181,27,0.14)",
 };
 
 export default Colors;

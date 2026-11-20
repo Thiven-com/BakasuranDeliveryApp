@@ -1,24 +1,24 @@
-
-import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
   Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 
 const COLORS = {
-  background: "#050505",
-  red: "#F9080C",
-  green: "#20D329",
-  white: "#FFFFFF",
-  gray: "#BDBDBD",
-  card: "#191919",
+  background: Colors.background,
+  red: Colors.primary,
+  green: Colors.success,
+  white: Colors.white,
+  gray: Colors.textSecondary,
+  card: Colors.card,
 };
 
 export default function DeliverySuccessScreen() {
@@ -33,12 +33,7 @@ export default function DeliverySuccessScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.background}
-      />
-
-     
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* Back Button */}
       <View style={styles.header}>
@@ -47,17 +42,12 @@ export default function DeliverySuccessScreen() {
           activeOpacity={0.7}
           onPress={() => router.back()}
         >
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={COLORS.white}
-          />
+          <Ionicons name="chevron-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
       {/* Main Success Content */}
       <View style={styles.content}>
-
         {/* Green Success Icon */}
         <View style={styles.successCircle}>
           <Ionicons
@@ -75,16 +65,13 @@ export default function DeliverySuccessScreen() {
 
         {/* Order ID */}
         <View style={styles.orderIdContainer}>
-          <Text style={styles.orderIdText}>
-            {orderId}
-          </Text>
+          <Text style={styles.orderIdText}>{orderId}</Text>
         </View>
 
         {/* Earned Amount */}
-        <Text style={styles.earnedAmount}>
+        {/*<Text style={styles.earnedAmount}>
           ₹{amount} Earned
-        </Text>
-
+        </Text>*/}
       </View>
 
       {/* View Earnings Button */}
@@ -94,9 +81,7 @@ export default function DeliverySuccessScreen() {
           activeOpacity={0.85}
           onPress={handleViewEarnings}
         >
-          <Text style={styles.buttonText}>
-            View Earnings
-          </Text>
+          <Text style={styles.buttonText}>View Earnings</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -108,8 +93,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-
- 
 
   // Header
   header: {
@@ -158,7 +141,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 26,
     lineHeight: 29,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     textAlign: "center",
     marginBottom: 17,
   },
@@ -177,14 +160,14 @@ const styles = StyleSheet.create({
   orderIdText: {
     color: COLORS.white,
     fontSize: 22,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 
   // Earnings
   earnedAmount: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     marginTop: 1,
   },
 
@@ -208,6 +191,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 });

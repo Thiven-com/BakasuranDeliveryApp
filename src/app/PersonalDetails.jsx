@@ -6,6 +6,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -32,6 +33,8 @@ const API_ENDPOINT = "api/delivery/profile/update";
 
 const DEFAULT_IMAGE = require("../../assets/images/Profile.png");
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 const INITIAL_PROFILE = {
   name: "",
   mobile: "",
@@ -42,28 +45,21 @@ const INITIAL_PROFILE = {
   city: "",
   state: "",
   pincode: "",
+  latitude: "",
+  longitude: "",
 };
 
 // =====================================================
 // HELPERS
 // =====================================================
 
-const getProfileData = (response) => {
-  return (
-    response?.data?.data ||
-    response?.data ||
-    response?.profile ||
-    response ||
-    {}
-  );
-};
+const getProfileData = (response) =>
+  response?.data?.data || response?.data || response?.profile || response || {};
 
 const formatDate = (value) => {
   if (!value) return "";
-
   const date = String(value);
-
-  // API may return ISO date-time.
+  // API may return an ISO date-time.
   return date.includes("T") ? date.split("T")[0] : date;
 };
 
@@ -71,17 +67,64 @@ const getImageUrl = (image) => {
   if (!image) return null;
 
   const value = String(image).trim();
-
   if (!value) return null;
 
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
+  if (/^https?:\/\//i.test(value)) return value;
 
   const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
   const imagePath = value.replace(/^\/+/, "");
 
   return `${baseUrl}/${imagePath}`;
+};
+
+// Returns "" for null/undefined, otherwise a string (keeps 0 values).
+const toText = (...values) => {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+  return "";
+};
+
+// Handles the different shapes a "verified" flag can come in.
+const getIsVerified = (data) => {
+  const raw =
+    data?.is_verified ??
+    data?.verified ??
+    data?.verification_status ??
+    data?.kyc_status ??
+    data?.status;
+
+  if (raw === undefined || raw === null) return false;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw === 1;
+
+  return ["1", "true", "verified", "approved", "active"].includes(
+    String(raw).trim().toLowerCase(),
+  );
+};
+
+const mapProfile = (data, fallback = INITIAL_PROFILE) => {
+  const address = data?.address || {};
+
+  return {
+    name: toText(data?.name, fallback.name),
+    mobile: toText(data?.mobile, fallback.mobile),
+    email: toText(data?.email, fallback.email),
+    dob: formatDate(toText(data?.date_of_birth, data?.dob, fallback.dob)),
+    addressLine1: toText(
+      data?.address_line_1,
+      address?.address_line_1,
+      fallback.addressLine1,
+    ),
+    area: toText(data?.area, address?.area, fallback.area),
+    city: toText(data?.city, address?.city, fallback.city),
+    state: toText(data?.state, address?.state, fallback.state),
+    pincode: toText(data?.pincode, address?.pincode, fallback.pincode),
+    latitude: toText(data?.latitude, address?.latitude, fallback.latitude),
+    longitude: toText(data?.longitude, address?.longitude, fallback.longitude),
+  };
 };
 
 // =====================================================
@@ -100,7 +143,10 @@ function DetailCard({
   editable = true,
   placeholder,
   autoCapitalize = "sentences",
+  maxLength,
 }) {
+  const showInput = isEditing && editable;
+
   return (
     <View style={styles.detailCard}>
       <View style={styles.detailIcon}>
@@ -108,9 +154,12 @@ function DetailCard({
       </View>
 
       <View style={styles.detailContent}>
-        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailLabel}>
+          {label}
+          {isEditing && !editable ? "  (read only)" : ""}
+        </Text>
 
-        {isEditing && editable ? (
+        {showInput ? (
           <TextInput
             style={styles.detailInput}
             value={String(profile[field] ?? "")}
@@ -121,8 +170,8 @@ function DetailCard({
             autoCapitalize={autoCapitalize}
             editable={!saving}
             selectionColor={Colors.primary}
-            blurOnSubmit={false}
             autoCorrect={false}
+            maxLength={maxLength}
           />
         ) : (
           <Text style={styles.detailValue}>
@@ -166,8 +215,10 @@ export default function PersonalDetailsScreen() {
 
   const [profileImage, setProfileImage] = useState(null);
   const [serverProfileImage, setServerProfileImage] = useState(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
@@ -176,18 +227,12 @@ export default function PersonalDetailsScreen() {
   // FETCH DELIVERY PROFILE
   // =====================================================
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-
-      console.log("========== PERSONAL PROFILE FETCH START ==========");
+      if (silent) setRefreshing(true);
+      else setLoading(true);
 
       const response = await getDeliveryProfile();
-
-      console.log(
-        "PERSONAL PROFILE RESPONSE:",
-        JSON.stringify(response, null, 2),
-      );
 
       if (
         response?.status === false ||
@@ -198,34 +243,14 @@ export default function PersonalDetailsScreen() {
       }
 
       const data = getProfileData(response);
-      const address = data?.address || {};
-
-      const fetchedProfile = {
-        name: String(data?.name || ""),
-        mobile: String(data?.mobile || ""),
-        email: String(data?.email || ""),
-        dob: formatDate(data?.date_of_birth || data?.dob),
-        addressLine1: String(
-          data?.address_line_1 || address?.address_line_1 || "",
-        ),
-        area: String(data?.area || address?.area || ""),
-        city: String(data?.city || address?.city || ""),
-        state: String(data?.state || address?.state || ""),
-        pincode: String(data?.pincode || address?.pincode || ""),
-      };
+      const fetchedProfile = mapProfile(data);
 
       setProfile(fetchedProfile);
       setSavedProfile(fetchedProfile);
-
-      const imageUrl = getImageUrl(data?.profile_image);
-
-      setServerProfileImage(imageUrl);
-
-      console.log("PROFILE DATA LOADED:", fetchedProfile);
-      console.log("PROFILE IMAGE:", imageUrl);
-      console.log("========== PERSONAL PROFILE FETCH END ==========");
+      setServerProfileImage(getImageUrl(data?.profile_image));
+      setIsVerified(getIsVerified(data));
     } catch (error) {
-      console.log("PROFILE FETCH ERROR:", error?.message || error);
+      if (__DEV__) console.log("PROFILE FETCH ERROR:", error?.message || error);
 
       Alert.alert(
         "Profile Error",
@@ -233,6 +258,7 @@ export default function PersonalDetailsScreen() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -244,12 +270,9 @@ export default function PersonalDetailsScreen() {
   // UPDATE INPUT
   // =====================================================
 
-  const updateField = (field, value) => {
-    setProfile((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
+  const updateField = useCallback((field, value) => {
+    setProfile((previous) => ({ ...previous, [field]: value }));
+  }, []);
 
   // =====================================================
   // IMAGE PICKER
@@ -279,9 +302,7 @@ export default function PersonalDetailsScreen() {
         quality: 0.8,
       });
 
-      if (result.canceled || !result.assets?.length) {
-        return;
-      }
+      if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
 
@@ -289,20 +310,14 @@ export default function PersonalDetailsScreen() {
         throw new Error("Selected image is not available.");
       }
 
-      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      let mimeType = (asset.mimeType || "image/jpeg").toLowerCase();
 
-      let mimeType = asset.mimeType || "image/jpeg";
-
-      if (!allowedTypes.includes(mimeType)) {
-        throw new Error("Please select JPG, PNG, or WEBP image.");
+      if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+        throw new Error("Please select a JPG, PNG, or WEBP image.");
       }
 
-      const extension =
-        mimeType === "image/png"
-          ? "png"
-          : mimeType === "image/webp"
-            ? "webp"
-            : "jpg";
+      const getExtension = (type) =>
+        type === "image/png" ? "png" : type === "image/webp" ? "webp" : "jpg";
 
       let selectedFile;
 
@@ -314,36 +329,29 @@ export default function PersonalDetailsScreen() {
         }
 
         const blob = await imageResponse.blob();
+        mimeType = (blob.type || mimeType).toLowerCase();
 
-        mimeType = blob.type || mimeType;
-
-        if (!allowedTypes.includes(mimeType)) {
-          throw new Error("Please select JPG, PNG, or WEBP image.");
+        if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+          throw new Error("Please select a JPG, PNG, or WEBP image.");
         }
 
-        selectedFile = new File([blob], `profile_${Date.now()}.${extension}`, {
-          type: mimeType,
-        });
+        selectedFile = new File(
+          [blob],
+          `profile_${Date.now()}.${getExtension(mimeType)}`,
+          { type: mimeType },
+        );
       } else {
         selectedFile = {
           uri: asset.uri,
-          name: asset.fileName || `profile_${Date.now()}.${extension}`,
+          name:
+            asset.fileName || `profile_${Date.now()}.${getExtension(mimeType)}`,
           type: mimeType,
         };
       }
 
-      setProfileImage({
-        uri: asset.uri,
-        file: selectedFile,
-      });
-
-      console.log("PROFILE IMAGE SELECTED:", {
-        name: selectedFile.name,
-        type: selectedFile.type,
-        platform: Platform.OS,
-      });
+      setProfileImage({ uri: asset.uri, file: selectedFile });
     } catch (error) {
-      console.log("IMAGE PICKER ERROR:", error);
+      if (__DEV__) console.log("IMAGE PICKER ERROR:", error);
 
       Alert.alert(
         "Image Error",
@@ -364,20 +372,57 @@ export default function PersonalDetailsScreen() {
       return false;
     }
 
-    // Email is nullable in your Laravel validation.
+    // Email is nullable on the backend.
     if (profile.email.trim() && !/^\S+@\S+\.\S+$/.test(profile.email.trim())) {
       Alert.alert("Invalid Email", "Please enter a valid email address.");
       return false;
     }
 
-    if (profile.dob.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(profile.dob.trim())) {
-      Alert.alert("Invalid Date", "Enter date of birth in YYYY-MM-DD format.");
-      return false;
+    const dob = profile.dob.trim();
+    if (dob) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        Alert.alert(
+          "Invalid Date",
+          "Enter date of birth in YYYY-MM-DD format.",
+        );
+        return false;
+      }
+
+      const parsed = new Date(`${dob}T00:00:00`);
+      const isRealDate =
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === dob;
+
+      if (!isRealDate || parsed > new Date()) {
+        Alert.alert("Invalid Date", "Please enter a valid date of birth.");
+        return false;
+      }
     }
 
     if (profile.pincode.trim() && !/^\d{6}$/.test(profile.pincode.trim())) {
       Alert.alert("Invalid Pincode", "Enter a valid 6-digit pincode.");
       return false;
+    }
+
+    const latitude = profile.latitude.trim();
+    if (latitude) {
+      const value = Number(latitude);
+      if (Number.isNaN(value) || value < -90 || value > 90) {
+        Alert.alert("Invalid Latitude", "Latitude must be between -90 and 90.");
+        return false;
+      }
+    }
+
+    const longitude = profile.longitude.trim();
+    if (longitude) {
+      const value = Number(longitude);
+      if (Number.isNaN(value) || value < -180 || value > 180) {
+        Alert.alert(
+          "Invalid Longitude",
+          "Longitude must be between -180 and 180.",
+        );
+        return false;
+      }
     }
 
     return true;
@@ -415,7 +460,6 @@ export default function PersonalDetailsScreen() {
 
   const handleSave = async () => {
     if (saving) return;
-
     if (!validateForm()) return;
 
     try {
@@ -423,15 +467,10 @@ export default function PersonalDetailsScreen() {
 
       const formData = new FormData();
 
-      console.log("========== PROFILE UPDATE START ==========");
-
       // Personal information.
       formData.append("name", profile.name.trim());
 
-      // IMPORTANT:
-      // Do NOT send mobile here.
-      // Mobile is read-only and already belongs to the logged-in partner.
-
+      // IMPORTANT: mobile is read-only, so it is NOT sent.
       formData.append("email", profile.email.trim());
       formData.append("date_of_birth", profile.dob.trim());
 
@@ -442,30 +481,18 @@ export default function PersonalDetailsScreen() {
       formData.append("state", profile.state.trim());
       formData.append("pincode", profile.pincode.trim());
 
-      // Upload image only when a new image is selected.
-      appendProfileImage(formData);
-
-      console.log("API ENDPOINT:", API_ENDPOINT);
-      console.log("REQUEST METHOD: POST");
-      console.log("REQUEST TYPE: MULTIPART");
-      console.log("REQUEST FIELDS:");
-
-      for (const [key, value] of formData.entries()) {
-        console.log(
-          key,
-          typeof value === "object"
-            ? {
-                name: value.name,
-                type: value.type,
-              }
-            : value,
-        );
+      // Coordinates: only send when filled, so we never overwrite with "".
+      if (profile.latitude.trim()) {
+        formData.append("latitude", profile.latitude.trim());
+      }
+      if (profile.longitude.trim()) {
+        formData.append("longitude", profile.longitude.trim());
       }
 
-      const response = await postMethod(API_ENDPOINT, formData);
+      // Upload image only when a new one is selected.
+      appendProfileImage(formData);
 
-      console.log("========== PROFILE UPDATE RESPONSE ==========");
-      console.log(JSON.stringify(response, null, 2));
+      const response = await postMethod(API_ENDPOINT, formData);
 
       const isSuccess =
         response?.status === true ||
@@ -475,26 +502,7 @@ export default function PersonalDetailsScreen() {
 
       if (isSuccess) {
         const updatedData = getProfileData(response);
-        const updatedAddress = updatedData?.address || {};
-
-        const updatedProfile = {
-          ...profile,
-          name: updatedData?.name ?? profile.name,
-          mobile: updatedData?.mobile ?? profile.mobile,
-          email: updatedData?.email ?? profile.email,
-          dob: formatDate(
-            updatedData?.date_of_birth ?? updatedData?.dob ?? profile.dob,
-          ),
-          addressLine1:
-            updatedData?.address_line_1 ??
-            updatedAddress?.address_line_1 ??
-            profile.addressLine1,
-          area: updatedData?.area ?? updatedAddress?.area ?? profile.area,
-          city: updatedData?.city ?? updatedAddress?.city ?? profile.city,
-          state: updatedData?.state ?? updatedAddress?.state ?? profile.state,
-          pincode:
-            updatedData?.pincode ?? updatedAddress?.pincode ?? profile.pincode,
-        };
+        const updatedProfile = mapProfile(updatedData, profile);
 
         setProfile(updatedProfile);
         setSavedProfile(updatedProfile);
@@ -510,15 +518,12 @@ export default function PersonalDetailsScreen() {
           "Success",
           response?.message || "Profile updated successfully.",
         );
-
-        console.log("PROFILE UPDATE SUCCESS");
       } else if (response?.errors) {
         const errorMessages = Object.entries(response.errors)
           .map(([field, messages]) => {
             const message = Array.isArray(messages)
               ? messages.join(", ")
               : String(messages);
-
             return `${field}: ${message}`;
           })
           .join("\n");
@@ -529,14 +534,14 @@ export default function PersonalDetailsScreen() {
           "Update Failed",
           response?.message || "Unable to update profile.",
         );
-
-        console.log("PROFILE UPDATE FAILED:", response);
       }
     } catch (error) {
-      console.log(
-        "PROFILE UPDATE ERROR:",
-        error?.response?.data || error?.message || error,
-      );
+      if (__DEV__) {
+        console.log(
+          "PROFILE UPDATE ERROR:",
+          error?.response?.data || error?.message || error,
+        );
+      }
 
       Alert.alert(
         "Error",
@@ -546,7 +551,6 @@ export default function PersonalDetailsScreen() {
       );
     } finally {
       setSaving(false);
-      console.log("========== PROFILE UPDATE END ==========");
     }
   };
 
@@ -592,6 +596,9 @@ export default function PersonalDetailsScreen() {
     );
   }
 
+  // Shared props for every DetailCard.
+  const common = { profile, updateField, isEditing, saving };
+
   // =====================================================
   // UI
   // =====================================================
@@ -606,12 +613,21 @@ export default function PersonalDetailsScreen() {
       >
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => fetchProfile({ silent: true })}
+                tintColor={Colors.primary}
+                colors={[Colors.primary]}
+                enabled={!isEditing}
+              />
+            }
           >
             {/* HEADER */}
             <View style={styles.header}>
@@ -670,9 +686,21 @@ export default function PersonalDetailsScreen() {
 
               <Text style={styles.profileRole}>Delivery Partner</Text>
 
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={21} color={Colors.white} />
-                <Text style={styles.verifiedText}>Verified Partner</Text>
+              {/* Reflects the real status, same as the My Profile screen */}
+              <View
+                style={[
+                  styles.verifiedBadge,
+                  !isVerified && styles.unverifiedBadge,
+                ]}
+              >
+                <Ionicons
+                  name={isVerified ? "checkmark" : "time-outline"}
+                  size={isVerified ? 21 : 18}
+                  color={Colors.white}
+                />
+                <Text style={styles.verifiedText}>
+                  {isVerified ? "Verified Partner" : "Not Verified"}
+                </Text>
               </View>
             </View>
 
@@ -681,47 +709,37 @@ export default function PersonalDetailsScreen() {
 
             <View style={styles.detailsContainer}>
               <DetailCard
+                {...common}
                 icon="person-outline"
                 label="Full Name"
                 field="name"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
               />
 
               <DetailCard
+                {...common}
                 icon="call-outline"
                 label="Mobile"
                 field="mobile"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
                 editable={false}
               />
 
               <DetailCard
+                {...common}
                 icon="mail-outline"
                 label="Email Address"
                 field="email"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
 
               <DetailCard
+                {...common}
                 icon="calendar-outline"
                 label="Date of Birth (YYYY-MM-DD)"
                 field="dob"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
                 placeholder="YYYY-MM-DD"
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
               />
             </View>
 
@@ -733,76 +751,58 @@ export default function PersonalDetailsScreen() {
 
             <View style={styles.detailsContainer}>
               <DetailCard
+                {...common}
                 icon="home-outline"
                 label="Address Line 1"
                 field="addressLine1"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
               />
 
               <DetailCard
+                {...common}
                 icon="navigate-outline"
                 label="Area"
                 field="area"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
               />
 
               <DetailCard
+                {...common}
                 icon="business-outline"
                 label="City"
                 field="city"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
               />
 
               <DetailCard
+                {...common}
                 icon="map-outline"
                 label="State"
                 field="state"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
               />
 
               <DetailCard
+                {...common}
                 icon="location-outline"
                 label="Pincode"
                 field="pincode"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
-                keyboardType="numeric"
+                keyboardType="number-pad"
+                maxLength={6}
               />
 
               <DetailCard
-                icon="location-outline"
+                {...common}
+                icon="compass-outline"
                 label="Latitude"
                 field="latitude"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
-                keyboardType="numeric"
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
               />
 
               <DetailCard
-                icon="location-outline"
+                {...common}
+                icon="compass-outline"
                 label="Longitude"
                 field="longitude"
-                profile={profile}
-                updateField={updateField}
-                isEditing={isEditing}
-                saving={saving}
-                keyboardType="numeric"
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
               />
             </View>
 
@@ -820,21 +820,18 @@ export default function PersonalDetailsScreen() {
               <Text style={styles.infoText}>
                 • Enter your correct personal information.
               </Text>
-
               <Text style={styles.infoText}>
                 • Make sure your email address is valid.
               </Text>
-
               <Text style={styles.infoText}>
                 • Upload a clear profile image.
               </Text>
-
               <Text style={styles.infoText}>
                 • Enter your correct 6-digit pincode.
               </Text>
             </View>
 
-            {/* SAVE BUTTON */}
+            {/* SAVE / EDIT BUTTON */}
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.buttonWrapper, saving && styles.disabledButton]}
@@ -983,6 +980,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontFamily: Fonts.extraBold,
     marginTop: 14,
+    textAlign: "center",
   },
 
   profileRole: {
@@ -1001,6 +999,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 30,
     marginTop: 17,
+  },
+
+  unverifiedBadge: {
+    backgroundColor: "#4B4B4B",
   },
 
   verifiedText: {
@@ -1078,9 +1080,9 @@ const styles = StyleSheet.create({
   },
 
   infoCard: {
-    backgroundColor: "#201010",
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: "#4A1717",
+    borderColor: Colors.border,
     borderRadius: 14,
     padding: 16,
     marginTop: 25,

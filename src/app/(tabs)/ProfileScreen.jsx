@@ -5,6 +5,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -16,67 +18,154 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import BASE_URL from "../../constants/AppUrls";
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 import { getDeliveryProfile } from "../../utils/Function";
 
 // =====================================================
-// COLORS
+// CONSTANTS
 // =====================================================
 
 const COLORS = {
-  background: "#050505",
-  card: "#191919",
-  border: "#292929",
-  red: "#F9080C",
-  green: "#20C957",
-  white: "#FFFFFF",
-  gray: "#BDBDBD",
+  background: Colors.background,
+  card: Colors.card,
+  border: Colors.border,
+  red: Colors.primary,
+  green: Colors.success,
+  white: Colors.white,
+  gray: Colors.textSecondary,
 };
+
 const LOGOUT_ENDPOINT = "api/delivery/logout";
 const TOKEN_KEY = "bakasuran_token";
 
+const STORAGE_KEYS_TO_CLEAR = [
+  TOKEN_KEY,
+  "token",
+  "access_token",
+  "accessToken",
+  "authToken",
+  "user",
+  "userData",
+];
+
 const DEFAULT_IMAGE = require("../../../assets/images/Friendly Bakasuran Delivery Partner.png");
+
+const MENU_ITEMS = [
+  {
+    id: "1",
+    title: "Personal Details",
+    icon: "person-outline",
+    route: "/PersonalDetails",
+  },
+  {
+    id: "2",
+    title: "Vehicle Details",
+    icon: "bicycle-outline",
+    route: "/VechileDetails",
+  },
+  {
+    id: "3",
+    title: "Bank Details",
+    icon: "card-outline",
+    route: "/BankDetails",
+  },
+  {
+    id: "4",
+    title: "Documents",
+    icon: "document-text-outline",
+    route: "/Documents",
+  },
+  {
+    id: "5",
+    title: "Privacy & Policy",
+    icon: "shield-checkmark-outline",
+    route: "/Privacy&Policy",
+  },
+  {
+    id: "6",
+    title: "Terms & Conditions",
+    icon: "document-outline",
+    route: "/Terms&Conditions",
+  },
+  {
+    id: "7",
+    title: "Notifications",
+    icon: "notifications-outline",
+    route: "/Notifications",
+  },
+  {
+    id: "8",
+    title: "Help & Support",
+    icon: "help-circle-outline",
+    route: "/Help&Support",
+  },
+];
 
 // =====================================================
 // HELPERS
 // =====================================================
 
-const getProfileData = (response) => {
-  return (
-    response?.data?.data ??
-    response?.data ??
-    response?.profile ??
-    response ??
-    {}
+const getProfileData = (response) =>
+  response?.data?.data ?? response?.data ?? response?.profile ?? response ?? {};
+
+// Turns relative image paths from the API into full URLs.
+const getImageUrl = (image) => {
+  if (typeof image !== "string") return null;
+
+  const value = image.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
+  return `${baseUrl}/${value.replace(/^\/+/, "")}`;
+};
+
+const getIsVerified = (data) => {
+  const raw =
+    data?.is_verified ??
+    data?.verified ??
+    data?.verification_status ??
+    data?.kyc_status;
+
+  if (raw === undefined || raw === null) return false;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw === 1;
+
+  return ["1", "true", "verified", "approved"].includes(
+    String(raw).trim().toLowerCase(),
   );
 };
 
-const isApiSuccessful = (response) => {
-  if (!response || typeof response !== "object") {
-    return false;
-  }
+// =====================================================
+// MENU ROW
+// =====================================================
 
-  if (
-    response.status === false ||
-    response.success === false ||
-    response.status === 0 ||
-    response.success === 0 ||
-    response.status === "0" ||
-    response.success === "0"
-  ) {
-    return false;
-  }
-
+function MenuRow({ item, isLast, disabled, onPress }) {
   return (
-    response.status === true ||
-    response.status === 1 ||
-    response.status === "1" ||
-    response.success === true ||
-    response.success === 1 ||
-    response.success === "1"
+    <TouchableOpacity
+      style={[styles.menuItem, isLast && styles.lastMenuItem]}
+      activeOpacity={0.75}
+      onPress={() => onPress(item)}
+      disabled={disabled}
+    >
+      <View style={styles.menuLeft}>
+        <View style={styles.menuIcon}>
+          <Ionicons name={item.icon} size={20} color={COLORS.red} />
+        </View>
+
+        <Text style={styles.menuTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+      </View>
+
+      <Ionicons name="chevron-forward" size={21} color={COLORS.gray} />
+    </TouchableOpacity>
   );
-};
+}
 
 // =====================================================
 // PROFILE SCREEN
@@ -85,30 +174,33 @@ const isApiSuccessful = (response) => {
 export default function ProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
 
   const logoutLock = useRef(false);
+  const hasLoadedOnce = useRef(false);
 
   // =====================================================
   // GET PROFILE
   // =====================================================
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      // Full-screen loader only on the very first load,
+      // so coming back to this screen doesn't flash a spinner.
+      if (silent) setRefreshing(true);
+      else if (!hasLoadedOnce.current) setLoading(true);
+
       setError("");
 
-      console.log("========== PROFILE FETCH START ==========");
-
       const response = await getDeliveryProfile();
-
-      console.log("PROFILE RESPONSE:", JSON.stringify(response, null, 2));
 
       if (
         response?.success === 0 ||
         response?.success === false ||
-        response?.status === false
+        response?.status === false ||
+        response?.status === 0
       ) {
         throw new Error(response?.message || "Unable to load profile.");
       }
@@ -124,189 +216,105 @@ export default function ProfileScreen() {
       }
 
       setProfile(profileData);
-
-      console.log("PROFILE LOADED SUCCESSFULLY");
-      console.log("========== PROFILE FETCH END ==========");
+      hasLoadedOnce.current = true;
     } catch (err) {
-      console.log("PROFILE ERROR:", err);
+      if (__DEV__) console.log("PROFILE ERROR:", err?.message || err);
 
-      setError(err?.message || "Something went wrong. Please try again.");
+      // Keep showing old data if a background refresh fails.
+      if (!hasLoadedOnce.current) {
+        setError(err?.message || "Something went wrong. Please try again.");
+      } else {
+        Alert.alert("Refresh Failed", err?.message || "Please try again.");
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  // =====================================================
-  // REFRESH PROFILE ON SCREEN FOCUS
-  // =====================================================
-
   useFocusEffect(
     useCallback(() => {
-      fetchProfile();
+      fetchProfile(hasLoadedOnce.current);
     }, [fetchProfile]),
   );
 
   // =====================================================
-  // LOGOUT API
+  // LOGOUT
   // =====================================================
 
-  const performLogout = async () => {
-    console.log("STEP 1: LOGOUT FUNCTION STARTED");
-
-    if (logoutLock.current) {
-      console.log("LOGOUT ALREADY IN PROGRESS");
-      return;
+  const finishLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(STORAGE_KEYS_TO_CLEAR);
+    } catch (storageError) {
+      if (__DEV__) console.log("STORAGE CLEAR ERROR:", storageError);
     }
+
+    setProfile(null);
+    router.replace("/LogInScreen");
+  };
+
+  const performLogout = async () => {
+    if (logoutLock.current) return;
 
     logoutLock.current = true;
     setLoggingOut(true);
 
     try {
-      console.log("STEP 2: READING TOKEN");
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
 
-      const token = await AsyncStorage.getItem("bakasuran_token");
+      // No token means we are already logged out locally.
+      if (token) {
+        const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
 
-      console.log("STEP 3: TOKEN RESULT:", token ? "FOUND" : "NOT FOUND");
+        try {
+          await axios({
+            method: "POST",
+            url: `${baseUrl}/${LOGOUT_ENDPOINT}`,
+            data: {},
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token.trim()}`,
+            },
+            timeout: 20000,
+          });
+        } catch (apiError) {
+          const status = apiError?.response?.status;
 
-      if (!token) {
-        throw new Error("Authentication token not found.");
+          // 401 = token already expired/invalid, so logging out locally is correct.
+          // Any other failure (network/server): tell the user and stay logged in.
+          if (status !== 401) {
+            throw apiError;
+          }
+        }
       }
 
-      const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
-      const logoutUrl = `${baseUrl}/api/delivery/logout`;
-
-      console.log("STEP 4: LOGOUT URL:", logoutUrl);
-      console.log("STEP 5: SENDING API REQUEST");
-
-      const response = await axios({
-        method: "POST",
-        url: logoutUrl,
-        data: {},
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token.trim()}`,
-        },
-        timeout: 20000,
-      });
-
-      console.log("STEP 6: SERVER RESPONDED");
-      console.log("HTTP STATUS:", response.status);
-      console.log("RESPONSE DATA:", response.data);
-
-      const result = response.data;
-
-      const success =
-        result?.status === true ||
-        result?.status === 1 ||
-        result?.status === "1" ||
-        result?.success === true ||
-        result?.success === 1 ||
-        result?.success === "1";
-
-      if (!success) {
-        throw new Error(result?.message || "Logout was unsuccessful.");
+      await finishLogout();
+    } catch (err) {
+      if (__DEV__) {
+        console.log("LOGOUT ERROR:", err?.response?.data || err?.message);
       }
-
-      console.log("STEP 7: CLEARING STORAGE");
-
-      await AsyncStorage.multiRemove([
-        "bakasuran_token",
-        "token",
-        "access_token",
-        "accessToken",
-        "authToken",
-        "user",
-        "userData",
-      ]);
-
-      setProfile(null);
-
-      console.log("STEP 8: NAVIGATING TO LOGIN");
-
-      router.replace("/LogInScreen");
-    } catch (error) {
-      console.log("========== LOGOUT ERROR ==========");
-      console.log("ERROR:", error.message);
-      console.log("ERROR CODE:", error.code);
-      console.log("HTTP STATUS:", error.response?.status);
-      console.log("SERVER RESPONSE:", error.response?.data);
-      console.log("REQUEST URL:", error.config?.url);
 
       Alert.alert(
         "Logout Error",
-        error.response?.data?.message ||
-          error.message ||
-          "Unable to contact logout API.",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to log out. Please check your connection.",
       );
     } finally {
       logoutLock.current = false;
       setLoggingOut(false);
-      console.log("========== LOGOUT FINISHED ==========");
     }
   };
 
   const handleLogout = () => {
-    console.log("LOGOUT BUTTON PRESSED");
-    console.log("CALLING LOGOUT API DIRECTLY");
+    if (loggingOut) return;
 
-    performLogout();
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: performLogout },
+    ]);
   };
-
-  // =====================================================
-  // PROFILE MENU
-  // =====================================================
-
-  const menuItems = [
-    {
-      id: "1",
-      title: "Personal Details",
-      icon: "person-outline",
-      route: "/PersonalDetails",
-    },
-    {
-      id: "2",
-      title: "Vehicle Details",
-      icon: "bicycle-outline",
-      route: "/VechileDetails",
-    },
-    {
-      id: "3",
-      title: "Bank Details",
-      icon: "card-outline",
-      route: "/BankDetails",
-    },
-    {
-      id: "4",
-      title: "Documents",
-      icon: "document-text-outline",
-      route: "/Documents",
-    },
-    {
-      id: "5",
-      title: "Privacy & Policy",
-      icon: "shield-checkmark-outline",
-      route: "/Privacy&Policy",
-    },
-    {
-      id: "6",
-      title: "Terms & Conditions",
-      icon: "document-outline",
-      route: "/Terms&Conditions",
-    },
-    {
-      id: "7",
-      title: "Notifications",
-      icon: "notifications-outline",
-      route: "/Notifications",
-    },
-    {
-      id: "8",
-      title: "Help & Support",
-      icon: "help-circle-outline",
-      route: "/Help&Support",
-    },
-  ];
 
   // =====================================================
   // MENU NAVIGATION
@@ -314,7 +322,6 @@ export default function ProfileScreen() {
 
   const handleMenuPress = (item) => {
     if (logoutLock.current) return;
-
     router.push(item.route);
   };
 
@@ -333,69 +340,73 @@ export default function ProfileScreen() {
 
   const profileRole = profile?.role || profile?.user_type || "Delivery Partner";
 
-  const profileImage =
+  const imageUrl = getImageUrl(
     profile?.profile_image ||
-    profile?.profile_picture ||
-    profile?.image ||
-    profile?.avatar;
-
-  const isVerified =
-    profile?.is_verified === true ||
-    profile?.is_verified === 1 ||
-    profile?.verified === true ||
-    profile?.verified === 1 ||
-    profile?.verification_status === "verified";
-
-  const imageUrl =
-    typeof profileImage === "string" && profileImage.trim().length > 0
-      ? profileImage
-      : null;
+      profile?.profile_picture ||
+      profile?.image ||
+      profile?.avatar,
+  );
 
   const imageSource = imageUrl ? { uri: imageUrl } : DEFAULT_IMAGE;
+  const isVerified = getIsVerified(profile);
 
   // =====================================================
   // UI
   // =====================================================
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* HEADER */}
-
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
           onPress={() => router.back()}
           disabled={loggingOut}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={23} color={COLORS.white} />
+          <Ionicons name="chevron-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>My Profile</Text>
 
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={fetchProfile}
-          disabled={loading || loggingOut}
+          onPress={() => fetchProfile(true)}
+          disabled={loading || refreshing || loggingOut}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="refresh-outline" size={21} color={COLORS.white} />
+          {refreshing ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <Ionicons name="refresh-outline" size={22} color={COLORS.white} />
+          )}
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchProfile(true)}
+            tintColor={COLORS.red}
+            colors={[COLORS.red]}
+            progressBackgroundColor={COLORS.card}
+          />
+        }
       >
         {loading ? (
-          <View style={styles.loadingContainer}>
+          <View style={styles.centerBox}>
             <ActivityIndicator size="large" color={COLORS.red} />
-
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : error ? (
-          <View style={styles.errorContainer}>
+          <View style={styles.centerBox}>
             <Ionicons
               name="alert-circle-outline"
               size={42}
@@ -406,7 +417,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={fetchProfile}
+              onPress={() => fetchProfile()}
               disabled={loggingOut}
             >
               <Text style={styles.retryText}>Try Again</Text>
@@ -415,7 +426,6 @@ export default function ProfileScreen() {
         ) : (
           <>
             {/* PROFILE INFORMATION */}
-
             <View style={styles.profileSection}>
               <View style={styles.profileImageWrapper}>
                 <Image
@@ -425,7 +435,9 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text style={styles.profileName}>{profileName}</Text>
+              <Text style={styles.profileName} numberOfLines={2}>
+                {profileName}
+              </Text>
 
               <Text style={styles.profileRole}>{profileRole}</Text>
 
@@ -448,38 +460,19 @@ export default function ProfileScreen() {
             </View>
 
             {/* PROFILE MENU */}
-
             <View style={styles.menuContainer}>
-              {menuItems.map((item, index) => (
-                <TouchableOpacity
+              {MENU_ITEMS.map((item, index) => (
+                <MenuRow
                   key={item.id}
-                  style={[
-                    styles.menuItem,
-                    index === menuItems.length - 1 && styles.lastMenuItem,
-                  ]}
-                  activeOpacity={0.75}
-                  onPress={() => handleMenuPress(item)}
+                  item={item}
+                  isLast={index === MENU_ITEMS.length - 1}
                   disabled={loggingOut}
-                >
-                  <View style={styles.menuLeft}>
-                    <View style={styles.menuIcon}>
-                      <Ionicons name={item.icon} size={20} color={COLORS.red} />
-                    </View>
-
-                    <Text style={styles.menuTitle}>{item.title}</Text>
-                  </View>
-
-                  <Ionicons
-                    name="chevron-forward"
-                    size={21}
-                    color={COLORS.gray}
-                  />
-                </TouchableOpacity>
+                  onPress={handleMenuPress}
+                />
               ))}
             </View>
 
             {/* LOGOUT BUTTON */}
-
             <TouchableOpacity
               style={[styles.logoutButton, loggingOut && styles.disabledButton]}
               activeOpacity={0.8}
@@ -505,7 +498,7 @@ export default function ProfileScreen() {
 
         <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -516,11 +509,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: "100%",
     backgroundColor: COLORS.background,
   },
 
   header: {
-    height: 73,
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -528,7 +522,7 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 35,
+    width: 40,
     height: 40,
     justifyContent: "center",
     alignItems: "flex-start",
@@ -536,15 +530,20 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: COLORS.white,
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 22,
+    fontFamily: Fonts.bold,
   },
 
   refreshButton: {
-    width: 35,
+    width: 40,
     height: 40,
     justifyContent: "center",
     alignItems: "flex-end",
+  },
+
+  scroll: {
+    flex: 1,
+    width: "100%",
   },
 
   scrollContent: {
@@ -552,25 +551,18 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  loadingContainer: {
+  centerBox: {
     flex: 1,
     minHeight: 300,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 25,
   },
 
   loadingText: {
     color: COLORS.gray,
     fontSize: 15,
     marginTop: 12,
-  },
-
-  errorContainer: {
-    flex: 1,
-    minHeight: 300,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 25,
   },
 
   errorText: {
@@ -591,23 +583,25 @@ const styles = StyleSheet.create({
   retryText: {
     color: COLORS.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
+  // The old marginTop: 75 caused the large empty gap at the top.
   profileSection: {
     alignItems: "center",
-    marginTop: 75,
-    marginBottom: 40,
+    paddingTop: 20,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
   },
 
   profileImageWrapper: {
-    width: 95,
-    height: 95,
-    borderRadius: 48,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: COLORS.white,
-    marginBottom: 10,
+    backgroundColor: COLORS.card,
   },
 
   profileImage: {
@@ -618,18 +612,19 @@ const styles = StyleSheet.create({
   profileName: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "800",
-    marginTop: 3,
+    fontFamily: Fonts.extraBold,
+    marginTop: 14,
+    textAlign: "center",
   },
 
   profileRole: {
     color: COLORS.gray,
     fontSize: 16,
-    marginTop: 5,
+    marginTop: 4,
   },
 
   verifiedBadge: {
-    height: 28,
+    height: 30,
     paddingHorizontal: 14,
     backgroundColor: COLORS.green,
     borderRadius: 20,
@@ -647,23 +642,23 @@ const styles = StyleSheet.create({
   verifiedText: {
     color: COLORS.white,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   menuContainer: {
-    marginHorizontal: 14,
+    marginHorizontal: 16,
     backgroundColor: COLORS.card,
     borderRadius: 18,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     overflow: "hidden",
   },
 
   menuItem: {
-    minHeight: 65,
+    minHeight: 66,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
 
@@ -672,14 +667,16 @@ const styles = StyleSheet.create({
   },
 
   menuLeft: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    paddingRight: 8,
   },
 
   menuIcon: {
-    width: 37,
-    height: 37,
+    width: 38,
+    height: 38,
     borderRadius: 11,
     backgroundColor: "#2A1717",
     alignItems: "center",
@@ -687,16 +684,17 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
+    flex: 1,
     color: COLORS.white,
-    fontSize: 17,
-    fontWeight: "500",
+    fontSize: 16,
+    fontFamily: Fonts.medium,
   },
 
   logoutButton: {
-    height: 58,
-    marginHorizontal: 14,
-    marginTop: 25,
-    marginBottom: 15,
+    height: 56,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 12,
     backgroundColor: COLORS.red,
     borderRadius: 14,
     flexDirection: "row",
@@ -708,7 +706,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: COLORS.white,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   disabledButton: {
@@ -718,10 +716,10 @@ const styles = StyleSheet.create({
   footerText: {
     color: "#777777",
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     textAlign: "center",
     marginTop: 20,
-    marginBottom: 10,
+    marginBottom: Platform.OS === "ios" ? 10 : 20,
   },
 });
