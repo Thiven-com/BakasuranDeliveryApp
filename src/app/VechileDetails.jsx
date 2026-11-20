@@ -85,7 +85,7 @@ const DetailCard = ({
 // =====================================================
 
 const SectionHeader = ({ icon, title }) => (
-  <LinearGradient colors={["#260606", "#100303"]} style={styles.sectionHeader}>
+  <LinearGradient colors={["#080808", "#100303"]} style={styles.sectionHeader}>
     <Ionicons name={icon} size={24} color={Colors.primary} />
     <Text style={styles.sectionTitle}>{title}</Text>
   </LinearGradient>

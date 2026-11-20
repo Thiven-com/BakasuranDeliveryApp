@@ -14,20 +14,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 import { acceptOrder, getNewOrders } from "../../utils/Function";
 
 const COLORS = {
-  background: "#0A0A0A",
-  card: "#161616",
-  cardBorder: "#262626",
-  surface: "#1F1F1F",
-  red: "#F9080C",
-  redSoft: "rgba(249, 8, 12, 0.14)",
-  white: "#FFFFFF",
-  gray: "#9A9A9A",
-  lightGray: "#D0D0D0",
-  gold: "#F5B51B",
-  goldSoft: "rgba(245, 181, 27, 0.14)",
+  background: Colors.background,
+  card: Colors.card,
+  cardBorder: Colors.border,
+  surface: Colors.cardLight,
+  red: Colors.primary,
+  redSoft: Colors.redOverlay,
+  white: Colors.white,
+  gray: Colors.textMuted,
+  lightGray: Colors.textSecondary,
+  gold: Colors.gold,
+  goldSoft: Colors.goldOverlay,
 };
 
 export default function OrdersScreen() {
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 22,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
   countPill: {
@@ -313,7 +315,7 @@ const styles = StyleSheet.create({
   countPillText: {
     color: COLORS.white,
     fontSize: 13,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
   headerRight: {
     width: 40,
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   errorBox: {
     flexDirection: "row",
@@ -375,7 +377,7 @@ const styles = StyleSheet.create({
   retryText: {
     color: COLORS.white,
     fontSize: 14,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginLeft: 8,
   },
 
@@ -401,14 +403,14 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.gray,
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     letterSpacing: 1,
     marginBottom: 2,
   },
   orderId: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
   newBadge: {
     flexDirection: "row",
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
   newBadgeText: {
     color: COLORS.red,
     fontSize: 12,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     letterSpacing: 0.6,
   },
 
@@ -446,12 +448,12 @@ const styles = StyleSheet.create({
   amountLabel: {
     color: COLORS.lightGray,
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
   },
   amount: {
     color: COLORS.gold,
     fontSize: 24,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   divider: {
@@ -480,7 +482,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     color: COLORS.white,
     fontSize: 17,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
   address: {
     color: COLORS.gray,
@@ -506,7 +508,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: COLORS.lightGray,
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
     marginLeft: 6,
   },
 
@@ -531,7 +533,7 @@ const styles = StyleSheet.create({
   acceptButtonText: {
     color: COLORS.white,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginLeft: 8,
   },
 });

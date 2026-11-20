@@ -14,16 +14,18 @@ import {
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 import { pickupOrder } from "../utils/Function";
 
 const COLORS = {
-  background: "#0A0A0A",
-  card: "#161616",
-  border: "#292929",
-  red: "#F9080C",
-  white: "#FFFFFF",
-  gray: "#999999",
-  green: "#20D34A",
+  background: Colors.background,
+  card: Colors.card,
+  border: Colors.border,
+  red: Colors.primary,
+  white: Colors.white,
+  gray: Colors.textMuted,
+  green: Colors.primary,
 };
 
 export default function PickupScreen() {
@@ -198,7 +200,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   content: {
@@ -211,7 +213,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "rgba(32,211,74,0.12)",
+    backgroundColor: "rgba(211, 32, 32, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     textAlign: "center",
   },
 
@@ -246,14 +248,14 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.gray,
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 1,
   },
 
   orderNumber: {
     color: COLORS.white,
     fontSize: 23,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginTop: 5,
   },
 
@@ -272,13 +274,13 @@ const styles = StyleSheet.create({
   statusText: {
     color: COLORS.green,
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 
   inputLabel: {
     color: COLORS.white,
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
     marginBottom: 10,
   },
 
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     color: COLORS.white,
     fontSize: 22,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     textAlign: "center",
     letterSpacing: 8,
   },
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
   verifyButtonText: {
     color: COLORS.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   note: {

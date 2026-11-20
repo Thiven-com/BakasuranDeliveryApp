@@ -23,12 +23,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import Colors from "../../constants/Colors";
 import Fonts from "../../constants/Fonts";
 import { deliveryLogin } from "../../utils/Function";
 
-const RED = "#FF101B";
-const DARK = "#050505";
-const WHITE = "#FFFFFF";
+const RED = Colors.primary;
+const DARK = Colors.background;
+const WHITE = Colors.white;
 
 export default function LoginScreen() {
   const router = useRouter();

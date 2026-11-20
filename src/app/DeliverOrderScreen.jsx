@@ -17,17 +17,19 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 import {
   sendDeliveryOtpForOrder,
   verifyOrderDeliveryOtp,
 } from "../utils/Function";
 
 const COLORS = {
-  background: "#050505",
-  red: "#F9080C",
-  white: "#FFFFFF",
-  gray: "#BDBDBD",
-  card: "#222222",
+  background: Colors.background,
+  red: Colors.primary,
+  white: Colors.white,
+  gray: Colors.textSecondary,
+  card: Colors.cardLight,
 };
 
 export default function DeliverOrderScreen() {
@@ -291,7 +293,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   headerRight: {
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.white,
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     textAlign: "center",
     marginTop: 4,
     marginBottom: 7,
@@ -367,7 +369,7 @@ const styles = StyleSheet.create({
   resendOtpText: {
     color: COLORS.white,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     textDecorationLine: "underline",
   },
 
@@ -398,7 +400,7 @@ const styles = StyleSheet.create({
   otpText: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   hiddenInput: {
@@ -435,6 +437,6 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 });

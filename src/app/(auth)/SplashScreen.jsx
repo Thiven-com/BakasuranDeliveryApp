@@ -13,6 +13,9 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
+
 export default function SplashScreen() {
   const router = useRouter();
 
@@ -88,9 +91,9 @@ const styles = StyleSheet.create({
   },
 
   partnerText: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: 23,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     fontStyle: "italic",
     marginTop: 5,
   },
@@ -102,9 +105,9 @@ const styles = StyleSheet.create({
   },
 
   tagline: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     fontStyle: "italic",
     marginBottom: 20,
   },

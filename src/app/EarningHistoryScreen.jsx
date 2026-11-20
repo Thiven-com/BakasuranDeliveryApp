@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import Colors from "../constants/Colors";
+import Fonts from "../constants/Fonts";
 import {
   getDeliveryEarnings,
   getMonthlyEarningHistory,
@@ -19,12 +21,12 @@ import {
 } from "../utils/Function";
 
 const COLORS = {
-  background: "#050505",
-  card: "#171717",
-  red: "#F9080C",
-  white: "#FFFFFF",
-  gray: "#A5A5A5",
-  green: "#19D53B",
+  background: Colors.background,
+  card: Colors.card,
+  red: Colors.primary,
+  white: Colors.white,
+  gray: Colors.textSecondary,
+  green: Colors.success,
 };
 
 const getEarningAmount = (item) => {
@@ -301,7 +303,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   headerRight: {
@@ -336,12 +338,12 @@ const styles = StyleSheet.create({
   filterText: {
     color: "#D0D0D0",
     fontSize: 19,
-    fontWeight: "600",
+    fontFamily: Fonts.semiBold,
   },
 
   activeFilterText: {
     color: COLORS.white,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
   },
 
   // Earnings List
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
   weeklySummaryTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   weeklySummaryDates: {
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
   weeklySummaryAmount: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     marginTop: 12,
   },
 
@@ -422,21 +424,21 @@ const styles = StyleSheet.create({
   orderId: {
     color: COLORS.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     marginBottom: 9,
   },
 
   deliveryTime: {
     color: COLORS.gray,
     fontSize: 17,
-    fontWeight: "500",
+    fontFamily: Fonts.medium,
   },
 
   // Amount
   amount: {
     color: COLORS.white,
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   amountDetails: {

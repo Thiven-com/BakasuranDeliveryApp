@@ -2,12 +2,14 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 
 const COLORS = {
-  primary: "#F9080C",
-  background: "#111111",
-  inactive: "#999999",
-  border: "#292929",
+  primary: Colors.primary,
+  background: Colors.background,
+  inactive: Colors.textMuted,
+  border: Colors.border,
 };
 
 export default function TabLayout() {
@@ -28,7 +30,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          fontFamily: Fonts.semiBold,
         },
       }}
     >
