@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: Colors.white,
-    fontSize: 21,
+    fontSize: 25,
     fontFamily: Fonts.extraBold,
   },
 
@@ -429,13 +429,13 @@ const styles = StyleSheet.create({
 
   filterText: {
     color: Colors.white,
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
   },
 
   activeFilterText: {
     color: Colors.white,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
   },
 
   // COUNT
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
 
   notificationCount: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: Fonts.semiBold,
   },
 
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   // NOTIFICATION CARD
 
   notificationCard: {
-    minHeight: 112,
+    minHeight: 42,
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -526,14 +526,14 @@ const styles = StyleSheet.create({
 
   notificationTitle: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 19,
     fontFamily: Fonts.bold,
     marginBottom: 5,
   },
 
   notificationMessage: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     lineHeight: 20,
   },

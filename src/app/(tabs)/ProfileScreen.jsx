@@ -1,3 +1,4 @@
+
 import axios from "axios";
 import { useCallback, useRef, useState } from "react";
 
@@ -18,21 +19,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 
 import BASE_URL from "../../constants/AppUrls";
+import Colors from "../../constants/Colors";
+import Fonts from "../../constants/Fonts";
 import { getDeliveryProfile } from "../../utils/Function";
 
 // =====================================================
-// COLORS
+// CONSTANTS
 // =====================================================
 
-const COLORS = {
-  background: "#050505",
-  card: "#191919",
-  border: "#292929",
-  red: "#F9080C",
-  green: "#20C957",
-  white: "#FFFFFF",
-  gray: "#BDBDBD",
-};
 const LOGOUT_ENDPOINT = "api/delivery/logout";
 const TOKEN_KEY = "bakasuran_token";
 
@@ -91,7 +85,7 @@ export default function ProfileScreen() {
   const logoutLock = useRef(false);
 
   // =====================================================
-  // GET PROFILE
+  // GET PROFILE API
   // =====================================================
 
   const fetchProfile = useCallback(async () => {
@@ -103,14 +97,19 @@ export default function ProfileScreen() {
 
       const response = await getDeliveryProfile();
 
-      console.log("PROFILE RESPONSE:", JSON.stringify(response, null, 2));
+      console.log(
+        "PROFILE RESPONSE:",
+        JSON.stringify(response, null, 2)
+      );
 
       if (
         response?.success === 0 ||
         response?.success === false ||
         response?.status === false
       ) {
-        throw new Error(response?.message || "Unable to load profile.");
+        throw new Error(
+          response?.message || "Unable to load profile."
+        );
       }
 
       const profileData = getProfileData(response);
@@ -126,24 +125,28 @@ export default function ProfileScreen() {
       setProfile(profileData);
 
       console.log("PROFILE LOADED SUCCESSFULLY");
-      console.log("========== PROFILE FETCH END ==========");
     } catch (err) {
       console.log("PROFILE ERROR:", err);
 
-      setError(err?.message || "Something went wrong. Please try again.");
+      setError(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
+      console.log("========== PROFILE FETCH END ==========");
     }
   }, []);
 
   // =====================================================
-  // REFRESH PROFILE ON SCREEN FOCUS
+  // REFRESH ON SCREEN FOCUS
   // =====================================================
 
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [fetchProfile]),
+    }, [fetchProfile])
   );
 
   // =====================================================
@@ -151,8 +154,6 @@ export default function ProfileScreen() {
   // =====================================================
 
   const performLogout = async () => {
-    console.log("STEP 1: LOGOUT FUNCTION STARTED");
-
     if (logoutLock.current) {
       console.log("LOGOUT ALREADY IN PROGRESS");
       return;
@@ -162,21 +163,19 @@ export default function ProfileScreen() {
     setLoggingOut(true);
 
     try {
-      console.log("STEP 2: READING TOKEN");
+      console.log("========== LOGOUT START ==========");
 
-      const token = await AsyncStorage.getItem("bakasuran_token");
-
-      console.log("STEP 3: TOKEN RESULT:", token ? "FOUND" : "NOT FOUND");
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
 
       if (!token) {
         throw new Error("Authentication token not found.");
       }
 
       const baseUrl = String(BASE_URL || "").replace(/\/+$/, "");
-      const logoutUrl = `${baseUrl}/api/delivery/logout`;
+      const logoutUrl = `${baseUrl}/${LOGOUT_ENDPOINT}`;
 
-      console.log("STEP 4: LOGOUT URL:", logoutUrl);
-      console.log("STEP 5: SENDING API REQUEST");
+      console.log("LOGOUT URL:", logoutUrl);
+      console.log("SENDING LOGOUT REQUEST...");
 
       const response = await axios({
         method: "POST",
@@ -190,26 +189,19 @@ export default function ProfileScreen() {
         timeout: 20000,
       });
 
-      console.log("STEP 6: SERVER RESPONDED");
-      console.log("HTTP STATUS:", response.status);
-      console.log("RESPONSE DATA:", response.data);
+      console.log("LOGOUT HTTP STATUS:", response.status);
+      console.log(
+        "LOGOUT RESPONSE:",
+        JSON.stringify(response.data, null, 2)
+      );
 
-      const result = response.data;
-
-      const success =
-        result?.status === true ||
-        result?.status === 1 ||
-        result?.status === "1" ||
-        result?.success === true ||
-        result?.success === 1 ||
-        result?.success === "1";
-
-      if (!success) {
-        throw new Error(result?.message || "Logout was unsuccessful.");
+      if (!isApiSuccessful(response.data)) {
+        throw new Error(
+          response.data?.message || "Logout was unsuccessful."
+        );
       }
 
-      console.log("STEP 7: CLEARING STORAGE");
-
+      // Clear authentication data
       await AsyncStorage.multiRemove([
         "bakasuran_token",
         "token",
@@ -222,34 +214,36 @@ export default function ProfileScreen() {
 
       setProfile(null);
 
-      console.log("STEP 8: NAVIGATING TO LOGIN");
+      console.log("AUTH STORAGE CLEARED");
 
+      // Navigate to login screen
       router.replace("/LogInScreen");
-    } catch (error) {
+
+      console.log("LOGOUT SUCCESSFUL");
+    } catch (err) {
       console.log("========== LOGOUT ERROR ==========");
-      console.log("ERROR:", error.message);
-      console.log("ERROR CODE:", error.code);
-      console.log("HTTP STATUS:", error.response?.status);
-      console.log("SERVER RESPONSE:", error.response?.data);
-      console.log("REQUEST URL:", error.config?.url);
+      console.log("ERROR:", err.message);
+      console.log("ERROR CODE:", err.code);
+      console.log("HTTP STATUS:", err.response?.status);
+      console.log("SERVER RESPONSE:", err.response?.data);
+      console.log("REQUEST URL:", err.config?.url);
 
       Alert.alert(
         "Logout Error",
-        error.response?.data?.message ||
-          error.message ||
-          "Unable to contact logout API.",
+        err.response?.data?.message ||
+          err.message ||
+          "Unable to contact logout API."
       );
     } finally {
       logoutLock.current = false;
       setLoggingOut(false);
-      console.log("========== LOGOUT FINISHED ==========");
+
+      console.log("========== LOGOUT END ==========");
     }
   };
 
   const handleLogout = () => {
     console.log("LOGOUT BUTTON PRESSED");
-    console.log("CALLING LOGOUT API DIRECTLY");
-
     performLogout();
   };
 
@@ -309,7 +303,7 @@ export default function ProfileScreen() {
   ];
 
   // =====================================================
-  // MENU NAVIGATION
+  // NAVIGATION
   // =====================================================
 
   const handleMenuPress = (item) => {
@@ -331,7 +325,10 @@ export default function ProfileScreen() {
     `${firstName} ${lastName}`.trim() ||
     "Delivery Partner";
 
-  const profileRole = profile?.role || profile?.user_type || "Delivery Partner";
+  const profileRole =
+    profile?.role ||
+    profile?.user_type ||
+    "Delivery Partner";
 
   const profileImage =
     profile?.profile_image ||
@@ -347,11 +344,14 @@ export default function ProfileScreen() {
     profile?.verification_status === "verified";
 
   const imageUrl =
-    typeof profileImage === "string" && profileImage.trim().length > 0
+    typeof profileImage === "string" &&
+    profileImage.trim().length > 0
       ? profileImage
       : null;
 
-  const imageSource = imageUrl ? { uri: imageUrl } : DEFAULT_IMAGE;
+  const imageSource = imageUrl
+    ? { uri: imageUrl }
+    : DEFAULT_IMAGE;
 
   // =====================================================
   // UI
@@ -359,7 +359,10 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.background}
+      />
 
       {/* HEADER */}
 
@@ -370,7 +373,11 @@ export default function ProfileScreen() {
           onPress={() => router.back()}
           disabled={loggingOut}
         >
-          <Ionicons name="chevron-back" size={23} color={COLORS.white} />
+          <Ionicons
+            name="chevron-back"
+            size={23}
+            color={Colors.white}
+          />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>My Profile</Text>
@@ -380,7 +387,11 @@ export default function ProfileScreen() {
           onPress={fetchProfile}
           disabled={loading || loggingOut}
         >
-          <Ionicons name="refresh-outline" size={21} color={COLORS.white} />
+          <Ionicons
+            name="refresh-outline"
+            size={21}
+            color={Colors.white}
+          />
         </TouchableOpacity>
       </View>
 
@@ -390,16 +401,21 @@ export default function ProfileScreen() {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.red} />
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary}
+            />
 
-            <Text style={styles.loadingText}>Loading profile...</Text>
+            <Text style={styles.loadingText}>
+              Loading profile...
+            </Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
             <Ionicons
               name="alert-circle-outline"
               size={42}
-              color={COLORS.red}
+              color={Colors.primary}
             />
 
             <Text style={styles.errorText}>{error}</Text>
@@ -409,7 +425,9 @@ export default function ProfileScreen() {
               onPress={fetchProfile}
               disabled={loggingOut}
             >
-              <Text style={styles.retryText}>Try Again</Text>
+              <Text style={styles.retryText}>
+                Try Again
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -425,9 +443,13 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text style={styles.profileName}>{profileName}</Text>
+              <Text style={styles.profileName}>
+                {profileName}
+              </Text>
 
-              <Text style={styles.profileRole}>{profileRole}</Text>
+              <Text style={styles.profileRole}>
+                {profileRole}
+              </Text>
 
               <View
                 style={[
@@ -436,9 +458,13 @@ export default function ProfileScreen() {
                 ]}
               >
                 <Ionicons
-                  name={isVerified ? "checkmark-circle" : "time-outline"}
+                  name={
+                    isVerified
+                      ? "checkmark-circle"
+                      : "time-outline"
+                  }
                   size={15}
-                  color={COLORS.white}
+                  color={Colors.white}
                 />
 
                 <Text style={styles.verifiedText}>
@@ -455,7 +481,8 @@ export default function ProfileScreen() {
                   key={item.id}
                   style={[
                     styles.menuItem,
-                    index === menuItems.length - 1 && styles.lastMenuItem,
+                    index === menuItems.length - 1 &&
+                      styles.lastMenuItem,
                   ]}
                   activeOpacity={0.75}
                   onPress={() => handleMenuPress(item)}
@@ -463,16 +490,22 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.menuLeft}>
                     <View style={styles.menuIcon}>
-                      <Ionicons name={item.icon} size={20} color={COLORS.red} />
+                      <Ionicons
+                        name={item.icon}
+                        size={20}
+                        color={Colors.primary}
+                      />
                     </View>
 
-                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuTitle}>
+                      {item.title}
+                    </Text>
                   </View>
 
                   <Ionicons
                     name="chevron-forward"
                     size={21}
-                    color={COLORS.gray}
+                    color={Colors.textSecondary}
                   />
                 </TouchableOpacity>
               ))}
@@ -481,29 +514,39 @@ export default function ProfileScreen() {
             {/* LOGOUT BUTTON */}
 
             <TouchableOpacity
-              style={[styles.logoutButton, loggingOut && styles.disabledButton]}
+              style={[
+                styles.logoutButton,
+                loggingOut && styles.disabledButton,
+              ]}
               activeOpacity={0.8}
               onPress={handleLogout}
               disabled={loggingOut}
             >
               {loggingOut ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator
+                  size="small"
+                  color={Colors.white}
+                />
               ) : (
                 <Ionicons
                   name="log-out-outline"
                   size={23}
-                  color={COLORS.white}
+                  color={Colors.white}
                 />
               )}
 
               <Text style={styles.logoutText}>
-                {loggingOut ? "Logging out..." : "Logout"}
+                {loggingOut
+                  ? "Logging out..."
+                  : "Logout"}
               </Text>
             </TouchableOpacity>
           </>
         )}
 
-        <Text style={styles.footerText}>BAKASURAN DELIVERY PARTNER</Text>
+        <Text style={styles.footerText}>
+          BAKASURAN DELIVERY PARTNER
+        </Text>
       </ScrollView>
     </View>
   );
@@ -516,7 +559,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: Colors.background,
   },
 
   header: {
@@ -535,9 +578,9 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: COLORS.white,
+    color: Colors.white,
     fontSize: 24,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   refreshButton: {
@@ -560,8 +603,9 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    color: COLORS.gray,
+    color: Colors.textSecondary,
     fontSize: 15,
+    fontFamily: Fonts.medium,
     marginTop: 12,
   },
 
@@ -574,14 +618,15 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
-    color: COLORS.gray,
+    color: Colors.textSecondary,
     fontSize: 15,
+    fontFamily: Fonts.regular,
     textAlign: "center",
     marginTop: 12,
   },
 
   retryButton: {
-    backgroundColor: COLORS.red,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 28,
     paddingVertical: 11,
     borderRadius: 10,
@@ -589,9 +634,9 @@ const styles = StyleSheet.create({
   },
 
   retryText: {
-    color: COLORS.white,
+    color: Colors.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   profileSection: {
@@ -606,7 +651,7 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: COLORS.white,
+    borderColor: Colors.white,
     marginBottom: 10,
   },
 
@@ -616,22 +661,23 @@ const styles = StyleSheet.create({
   },
 
   profileName: {
-    color: COLORS.white,
+    color: Colors.white,
     fontSize: 24,
-    fontWeight: "800",
+    fontFamily: Fonts.extraBold,
     marginTop: 3,
   },
 
   profileRole: {
-    color: COLORS.gray,
+    color: Colors.textSecondary,
     fontSize: 16,
+    fontFamily: Fonts.medium,
     marginTop: 5,
   },
 
   verifiedBadge: {
     height: 28,
     paddingHorizontal: 14,
-    backgroundColor: COLORS.green,
+    backgroundColor: Colors.success,
     borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -641,18 +687,18 @@ const styles = StyleSheet.create({
   },
 
   unverifiedBadge: {
-    backgroundColor: "#777777",
+    backgroundColor: Colors.textMuted,
   },
 
   verifiedText: {
-    color: COLORS.white,
+    color: Colors.white,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: Fonts.semiBold,
   },
 
   menuContainer: {
     marginHorizontal: 14,
-    backgroundColor: COLORS.card,
+    backgroundColor: Colors.card,
     borderRadius: 18,
     paddingHorizontal: 13,
     overflow: "hidden",
@@ -664,7 +710,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: Colors.border,
   },
 
   lastMenuItem: {
@@ -681,15 +727,15 @@ const styles = StyleSheet.create({
     width: 37,
     height: 37,
     borderRadius: 11,
-    backgroundColor: "#2A1717",
+    backgroundColor: Colors.redOverlay,
     alignItems: "center",
     justifyContent: "center",
   },
 
   menuTitle: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: "500",
+    color: Colors.white,
+    fontSize: 16,
+    fontFamily: Fonts.medium,
   },
 
   logoutButton: {
@@ -697,7 +743,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginTop: 25,
     marginBottom: 15,
-    backgroundColor: COLORS.red,
+    backgroundColor: Colors.primary,
     borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -706,9 +752,9 @@ const styles = StyleSheet.create({
   },
 
   logoutText: {
-    color: COLORS.white,
+    color: Colors.white,
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
   },
 
   disabledButton: {
@@ -716,9 +762,9 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    color: "#777777",
+    color: Colors.textMuted,
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
     letterSpacing: 1.5,
     textAlign: "center",
     marginTop: 20,

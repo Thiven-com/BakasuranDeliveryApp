@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: Colors.white,
-    fontSize: 21,
+    fontSize: 25,
     fontFamily: Fonts.extraBold,
   },
 
@@ -410,12 +410,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 16,
+    borderRadius: 21,
     overflow: "hidden",
   },
 
   policyCardHeader: {
-    minHeight: 105,
+    minHeight: 35,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
@@ -424,8 +424,8 @@ const styles = StyleSheet.create({
   },
 
   policyIcon: {
-    width: 62,
-    height: 62,
+    width: 52,
+    height: 52,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -437,14 +437,14 @@ const styles = StyleSheet.create({
 
   policyTitle: {
     color: Colors.white,
-    fontSize: 15,
-    fontFamily: Fonts.bold,
+    fontSize: 16,
+    fontFamily: Fonts.regular,
     marginBottom: 5,
   },
 
   policyDescription: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     lineHeight: 19,
   },

@@ -595,11 +595,11 @@ const styles = StyleSheet.create({
   },
 
   detailCard: {
-    minHeight: 83,
+    minHeight: 43,
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 13,
+    borderRadius: 30,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 15,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   // UPI CARD
 
   upiCard: {
-    minHeight: 90,
+    minHeight: 70,
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
 
   buttonWrapper: {
     marginTop: 45,
-    borderRadius: 16,
+    borderRadius: 21,
     overflow: "hidden",
   },
 

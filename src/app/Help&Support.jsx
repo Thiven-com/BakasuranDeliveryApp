@@ -1,13 +1,13 @@
 import { useState } from "react";
 
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
 
   categoryCard: {
-    minHeight: 98,
+    minHeight: 40,
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -502,14 +502,14 @@ const styles = StyleSheet.create({
 
   categoryTitle: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: Fonts.bold,
     marginBottom: 5,
   },
 
   categoryDescription: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     lineHeight: 18,
   },

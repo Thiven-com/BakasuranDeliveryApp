@@ -223,9 +223,9 @@ export default function LoginScreen() {
 
                 </View>
 
-                <Text style={styles.inputHint}>
+                {/*<Text style={styles.inputHint}>
                   {mobileNumber.length}/10 digits
-                </Text>
+                </Text>*/}
               </View>
 
               {/* SEND OTP BUTTON */}
@@ -317,8 +317,11 @@ export default function LoginScreen() {
 
           </ScrollView>
         </KeyboardAvoidingView>
+        
       </LinearGradient>
+      
     </SafeAreaView>
+    
   );
 }
 
@@ -370,7 +373,7 @@ const styles = StyleSheet.create({
     borderColor: "#8F1010",
     borderRadius: 40,
     paddingHorizontal: 24,
-    paddingTop: 25,
+    paddingTop: 35,
     paddingBottom: 10,
     marginTop: -5,
 
@@ -415,7 +418,7 @@ const styles = StyleSheet.create({
     color: "#BBBBBB",
     fontFamily: Fonts.medium,
     fontSize: 18,
-    lineHeight: 15,
+    lineHeight: 20,
     textAlign: "center",
   },
 
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
 
   buttonWrapper: {
     width: "100%",
-    marginTop: 10,
+    marginTop: 30,
     borderRadius: 35,
     overflow: "hidden",
 

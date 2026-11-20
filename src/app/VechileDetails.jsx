@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   },
 
   detailCard: {
-    minHeight: 85,
+    minHeight: 35,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.card,
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#4A1012",
+    backgroundColor: "#752527",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 13,
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#201010",
     borderWidth: 1,
     borderColor: "#4A1717",
-    borderRadius: 14,
+    borderRadius: 21,
     padding: 16,
     marginTop: 25,
   },
@@ -955,13 +955,13 @@ const styles = StyleSheet.create({
 
   infoTitle: {
     color: Colors.white,
-    fontSize: 15,
-    fontFamily: Fonts.bold,
+    fontSize: 19,
+    fontFamily: Fonts.regular,
   },
 
   infoText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 16,
     fontFamily: Fonts.regular,
     lineHeight: 23,
   },

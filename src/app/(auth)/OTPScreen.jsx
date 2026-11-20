@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   // OTP INPUT
 
   otpContainer: {
-    width: "100%",
+    width: "90%",
     marginTop: 65,
     alignItems: "center",
   },
@@ -320,12 +320,12 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 18,
   },
 
   otpBox: {
     flex: 1,
-    height: 75,
+    height: 65,
     backgroundColor: Colors.card,
     borderWidth: 1.5,
     borderColor: Colors.borderLight,
@@ -381,10 +381,10 @@ const styles = StyleSheet.create({
 
   verifyButton: {
     width: "100%",
-    height: 70,
+    height: 60,
     backgroundColor: Colors.primary,
     borderRadius: 18,
-    marginTop: 75,
+    marginTop: 55,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",

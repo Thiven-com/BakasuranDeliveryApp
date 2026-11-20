@@ -1031,14 +1031,15 @@ const styles = StyleSheet.create({
   },
 
   detailCard: {
-    minHeight: 83,
+    minHeight: 33,
+    
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 13,
+    borderRadius: 30,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     paddingVertical: 12,
   },
 
@@ -1055,7 +1056,7 @@ const styles = StyleSheet.create({
 
   detailLabel: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 17,
     fontFamily: Fonts.regular,
     marginBottom: 5,
   },
@@ -1063,7 +1064,7 @@ const styles = StyleSheet.create({
   detailValue: {
     color: Colors.white,
     fontSize: 16,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
     lineHeight: 24,
   },
 
@@ -1101,7 +1102,7 @@ const styles = StyleSheet.create({
 
   infoText: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 16,
     fontFamily: Fonts.regular,
     lineHeight: 23,
   },

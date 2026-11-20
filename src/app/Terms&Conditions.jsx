@@ -1,13 +1,13 @@
 import { useState } from "react";
 
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: Colors.white,
-    fontSize: 19,
-    fontFamily: Fonts.extraBold,
+    fontSize: 25,
+    fontFamily: Fonts.regular
   },
 
   headerRight: {
@@ -460,12 +460,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundLight,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 16,
+    borderRadius: 21,
     overflow: "hidden",
   },
 
   termsCardHeader: {
-    minHeight: 105,
+    minHeight: 45,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 13,
@@ -487,14 +487,14 @@ const styles = StyleSheet.create({
 
   termsTitle: {
     color: Colors.white,
-    fontSize: 15,
-    fontFamily: Fonts.bold,
+    fontSize: 17,
+    fontFamily: Fonts.regular,
     marginBottom: 5,
   },
 
   termsDescription: {
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.regular,
     lineHeight: 19,
   },
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   acceptText: {
     flex: 1,
     color: Colors.textSecondary,
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: Fonts.medium,
   },
 
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
 
   acceptButtonText: {
     color: Colors.white,
-    fontSize: 14,
+    fontSize: 17,
     fontFamily: Fonts.extraBold,
   },
 
